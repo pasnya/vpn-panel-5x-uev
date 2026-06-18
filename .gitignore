@@ -1,0 +1,9 @@
+# Ignore everything by default
+*
+
+# Whitelist allowed files and folders
+!install.sh
+!README.md
+!panel_src/
+!panel_src/**
+!.gitignore
