@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="panel_src/assets/logo.png" alt="VPN Panel 5X-UEV Logo" width="160" />
+</p>
+
 # 🚀 VPN panel 5X-UEV
 ### *«Ты бы сделал лучше, но пришлось делать мне»*
 
