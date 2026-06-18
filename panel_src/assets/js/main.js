@@ -200,7 +200,7 @@ function initSearchFilter() {
 }
 
 // Config details display
-function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword, realitySni, realitySid) {
+function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword, realitySni, realitySid, xhttpPath) {
     let domain = domains.find(d => d.id == domain_id);
     if (!domain && domains.length > 0) domain = domains[0];
 
@@ -209,6 +209,10 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
     let naiveSub = domain ? (domain.naive_sub || mainDomain) : '';
     let hasDomain = !!domain;
 
+    let pathName = xhttpPath || 'xhttp';
+    if (!pathName.startsWith('/')) pathName = '/' + pathName;
+    if (!pathName.endsWith('/')) pathName = pathName + '/';
+
     let vlessReality = `vless://${uuid}@${serverIp}:443?security=reality&sni=${realitySni || 'yahoo.com'}&pbk=${publicKey}&fp=chrome&type=tcp&flow=xtls-rprx-vision${realitySid ? '&sid=' + realitySid : ''}#Reality-${username}`;
 
     let configs = [
@@ -216,7 +220,7 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
     ];
 
     if (hasDomain) {
-        let vlessXhttp = `vless://${uuid}@${serverIp}:443?security=tls&sni=${mainDomain}&fp=chrome&type=xhttp&host=${mainDomain}&path=/xhttp&alpn=h2,http/1.1#XHTTP-${username}`;
+        let vlessXhttp = `vless://${uuid}@${serverIp}:443?security=tls&sni=${mainDomain}&fp=chrome&type=xhttp&host=${mainDomain}&path=${pathName}&alpn=h2,http/1.1#XHTTP-${username}`;
         let naiveLink = `naive+https://${username}:${uuid}@${naiveSub}:443#Naive-${username}`;
         let hysteriaLink = `hysteria2://${uuid}@${serverIp}:443?obfs-password=${obfsPassword}&security=tls&sni=${mainDomain}&alpn=h3,h2,http/1.1#Hysteria-${username}`;
         let mieruPassword = uuid.replace(/-/g, '').substring(0, 16);

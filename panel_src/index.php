@@ -57,6 +57,29 @@ if (!isset($_SESSION['logged_in'])) {
 
 /* ── Data ── */
 $db = new PDO('sqlite:/var/www/panel/db/panel.db');
+
+$paths_file = '/var/www/panel/db/paths.json';
+$admin_path = 'admin';
+$admin_port = '8080';
+$xhttp_path = 'xhttp';
+if (file_exists($paths_file)) {
+    $paths_data = json_decode(file_get_contents($paths_file), true);
+    if (is_array($paths_data)) {
+        $admin_path = $paths_data['admin_path'] ?? $admin_path;
+        $admin_port = $paths_data['admin_port'] ?? $admin_port;
+        $xhttp_path = $paths_data['xhttp_path'] ?? '';
+    }
+}
+if (empty($xhttp_path)) {
+    $xhttp_path = bin2hex(random_bytes(4));
+    $paths_data = [
+        'admin_path' => $admin_path,
+        'admin_port' => $admin_port,
+        'xhttp_path' => $xhttp_path
+    ];
+    @file_put_contents($paths_file, json_encode($paths_data, JSON_PRETTY_PRINT));
+}
+
 $domains = $db->query("SELECT * FROM domains ORDER BY domain_name")->fetchAll(PDO::FETCH_ASSOC);
 $users = $db->query("
     SELECT u.id, u.username, u.uuid, u.status, u.traffic_limit, u.traffic_used, u.created_at, u.expires_at,
@@ -289,7 +312,7 @@ foreach ($services as $srv) {
                         <td><code class="mono"><?= htmlspecialchars(mb_substr($u['uuid'], 0, 8)) ?>…</code></td>
                         <td><span class="tag <?= $u['status'] === 'active' ? 'tag-ok' : 'tag-warn' ?>"><?= $u['status'] ?></span></td>
                         <td style="text-align: right;">
-                            <button class="btn btn-sm" id="btnConfigs-<?= htmlspecialchars($u['username']) ?>" onclick="showConfigs('<?= htmlspecialchars($u['username']) ?>','<?= htmlspecialchars($u['uuid']) ?>','<?= $u['domain_id'] ?>',<?= htmlspecialchars(json_encode($domains), ENT_QUOTES, 'UTF-8') ?>,'<?= $public_key ?>','<?= $obfs_password ?>','<?= $reality_sni ?>','<?= $reality_sid ?>')">Конфиги</button>
+                            <button class="btn btn-sm" id="btnConfigs-<?= htmlspecialchars($u['username']) ?>" onclick="showConfigs('<?= htmlspecialchars($u['username']) ?>','<?= htmlspecialchars($u['uuid']) ?>','<?= $u['domain_id'] ?>',<?= htmlspecialchars(json_encode($domains), ENT_QUOTES, 'UTF-8') ?>,'<?= $public_key ?>','<?= $obfs_password ?>','<?= $reality_sni ?>','<?= $reality_sid ?>','<?= htmlspecialchars($xhttp_path) ?>')">Конфиги</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>

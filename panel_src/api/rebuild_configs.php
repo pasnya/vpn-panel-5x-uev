@@ -9,9 +9,24 @@ function rebuild_configs() {
 
         $paths_file = '/var/www/panel/db/paths.json';
         $admin_path = 'admin';
+        $admin_port = '8080';
+        $xhttp_path = 'xhttp';
         if (file_exists($paths_file)) {
             $paths = json_decode(file_get_contents($paths_file), true);
-            $admin_path = $paths['admin_path'] ?? $admin_path;
+            if (is_array($paths)) {
+                $admin_path = $paths['admin_path'] ?? $admin_path;
+                $admin_port = $paths['admin_port'] ?? $admin_port;
+                $xhttp_path = $paths['xhttp_path'] ?? '';
+            }
+        }
+        if (empty($xhttp_path)) {
+            $xhttp_path = bin2hex(random_bytes(4));
+            $paths_data = [
+                'admin_path' => $admin_path,
+                'admin_port' => $admin_port,
+                'xhttp_path' => $xhttp_path
+            ];
+            file_put_contents($paths_file, json_encode($paths_data, JSON_PRETTY_PRINT));
         }
 
         $php_ver = PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;
@@ -56,7 +71,7 @@ server {
         fastcgi_pass unix:" . $php_sock . ";
     }
 
-    location /xhttp {
+    location /" . $xhttp_path . " {
         proxy_redirect off;
         proxy_pass http://127.0.0.1:10001;
         proxy_http_version 1.1;
@@ -137,7 +152,7 @@ server {
                         }
                     }
                     if ($inbound['port'] == 10001) {
-                        $inbound['streamSettings']['xhttpSettings']['path'] = "/xhttp";
+                        $inbound['streamSettings']['xhttpSettings']['path'] = "/" . $xhttp_path . "/";
                     }
                 }
                 file_put_contents($xray_config_path, json_encode($xray_config, JSON_PRETTY_PRINT));

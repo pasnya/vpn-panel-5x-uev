@@ -31,6 +31,7 @@ fi
 ADMIN_SECRET=$(openssl rand -hex 12)
 CLIENT_UUID=$(cat /proc/sys/kernel/random/uuid)
 ADMIN_PORT=$((RANDOM % 50001 + 10000))
+XHTTP_PATH=$(openssl rand -hex 8)
 
 # ── Обновление пакетов и установка зависимостей ─────────────────────────────
 log_info "Начало установки. Обновление пакетов и установка зависимостей..."
@@ -62,8 +63,9 @@ log_info "-> Ссылка на панель управления: /${ADMIN_SECRE
 
 cat > /var/www/panel/db/paths.json << EOF
 {
-    "admin_path": "${ADMIN_SECRET}"
-    "admin_port": "${ADMIN_PORT}"
+    "admin_path": "${ADMIN_SECRET}",
+    "admin_port": "${ADMIN_PORT}",
+    "xhttp_path": "${XHTTP_PATH}"
 }
 EOF
 
@@ -269,7 +271,7 @@ cat > /etc/xray/config.json << EOF
       "streamSettings": {
         "network": "xhttp",
         "security": "none",
-        "xhttpSettings": { "path": "/xhttp" }
+        "xhttpSettings": { "path": "/${XHTTP_PATH}/" }
       }
     },
     {
@@ -281,8 +283,8 @@ cat > /etc/xray/config.json << EOF
         "network": "tcp",
         "security": "reality",
         "realitySettings": {
-          "show": false, "dest": "www.samsung.com:443", "xver": 0,
-          "serverNames": [ "yahoo.com", "www.yahoo.com", "www.microsoft.com", "microsoft.com", "www.samsung.com", "samsung.com" ],
+          "show": false, "dest": "yahoo.com:443", "xver": 0,
+          "serverNames": [ "yahoo.com", "www.yahoo.com" ],
           "privateKey": "${PRIVATE_KEY}",
           "shortIds": [ "0123456789abcdef" ]
         }
