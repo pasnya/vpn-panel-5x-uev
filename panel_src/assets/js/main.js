@@ -274,10 +274,10 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
     let html = `
         <div class="alert alert-info" style="margin-bottom: 18px;">
             <strong>Рекомендуемые приложения для подключения:</strong><br>
-            • <strong>Anarise VPN (Android, Windows):</strong> Рекомендуемый клиент для VLESS, Hysteria 2 и NaiveProxy.<br>
-            • <strong>VLESS / Hysteria 2:</strong> v2rayN (Windows), Nekobox (Android/Windows), Shadowrocket (iOS), Sing-box (все ОС).<br>
-            • <strong>NaiveProxy:</strong> Nekobox или официальный клиент NaiveProxy.<br>
-            • <strong>Mieru:</strong> Специальный клиент Mieru или Clash Meta (для Clash конфига).
+            • <strong>Windows & Android:</strong> <a href="https://github.com/pasnya/anarise-vpn" target="_blank" style="color: #8bf3fa; text-decoration: underline; font-weight: bold;">Anarise VPN</a> (поддерживает VLESS, Hysteria 2, NaiveProxy).<br>
+            • <strong>iOS (iPhone):</strong> Shadowrocket, Streisand, Sing-box.<br>
+            • <strong>macOS:</strong> Nekoray / Nekobox, Sing-box.<br>
+            • <strong>Mieru (все ОС):</strong> Специальный клиент Mieru или Clash Meta (для Clash конфига).
         </div>
     `;
 
