@@ -64,8 +64,9 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/
 
 ## 📱 Поддерживаемые клиенты
 
-*   **Windows**: [v2rayN](https://github.com/2dust/v2rayN), [Nekoray / Nekobox](https://github.com/MatsuriDayo/nekoray)
-*   **Android**: [Nekobox](https://github.com/MatsuriDayo/itatsumado), [v2rayNG](https://github.com/2dust/v2rayNG), [Sing-box](https://github.com/SagerNet/sing-box)
+*   **Рекомендуемый клиент**: **[Anarise VPN](https://github.com/pasnya/anarise-vpn)** (Android, Windows) — поддерживает VLESS, Hysteria 2 и NaiveProxy.
+*   **Windows**: [Anarise VPN](https://github.com/pasnya/anarise-vpn), [v2rayN](https://github.com/2dust/v2rayN), [Nekoray / Nekobox](https://github.com/MatsuriDayo/nekoray)
+*   **Android**: [Anarise VPN](https://github.com/pasnya/anarise-vpn), [Nekobox](https://github.com/MatsuriDayo/itatsumado), [v2rayNG](https://github.com/2dust/v2rayNG), [Sing-box](https://github.com/SagerNet/sing-box)
 *   **iOS (iPhone)**: [Shadowrocket](https://apps.apple.com/us/app/shadowrocket/id932747118), [Streisand](https://apps.apple.com/ru/app/streisand/id6450534064), [Sing-box](https://apps.apple.com/us/app/sing-box/id6448301546)
 *   **macOS**: [Nekoray / Nekobox](https://github.com/MatsuriDayo/nekoray), [Sing-box](https://github.com/SagerNet/sing-box)
 
