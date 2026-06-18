@@ -141,6 +141,12 @@ foreach ($services as $srv) {
 <body>
 <div class="wrap">
 
+    <?php if (isset($_GET['pw_success'])): ?>
+    <div class="alert alert-info" id="successPasswordAlert" style="margin-top: 15px; margin-bottom: 0;">
+        <strong>Успешно!</strong> Пароль администратора успешно изменен.
+    </div>
+    <?php endif; ?>
+
     <!-- Topbar -->
     <div class="topbar" id="mainTopbar">
         <div class="topbar-left">
@@ -394,32 +400,49 @@ foreach ($services as $srv) {
         </div>
     </div>
 
-    <!-- Cores -->
-    <div class="card" id="coresCard">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <div class="section-title" style="margin:0">
-                <span class="icon">⚡</span> Ядра и протоколы
-            </div>
-            <button class="btn btn-sm" id="btn-check-cores" onclick="checkCores()">Проверить обновления</button>
-        </div>
-        <div id="coresList">
-            <?php
-            $cores = [
-                ['key'=>'xray',    'name'=>'Xray Core',    'desc'=>'Служба VLESS + Reality + xhttp'],
-                ['key'=>'hysteria','name'=>'Hysteria 2',   'desc'=>'Служба QUIC (UDP) с высокой скоростью'],
-                ['key'=>'mita',    'name'=>'Mita (Mieru)', 'desc'=>'Служба TCP мультиплексирования'],
-                ['key'=>'caddy',   'name'=>'Caddy',        'desc'=>'Служба NaiveProxy + forward_proxy'],
-            ];
-            foreach ($cores as $c): ?>
-            <div class="cores-row" id="coreRow-<?= $c['key'] ?>">
-                <div class="cores-info">
-                    <div class="cores-name"><?= $c['name'] ?></div>
-                    <div class="cores-desc"><?= $c['desc'] ?></div>
+    <!-- Cores & Security Settings -->
+    <div class="cols">
+        <!-- Cores -->
+        <div class="card" id="coresCard" style="margin-top: 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div class="section-title" style="margin:0">
+                    <span class="icon">⚡</span> Ядра и протоколы
                 </div>
-                <span class="cores-ver" id="ver-<?= $c['key'] ?>">—</span>
-                <button class="btn btn-sm btn-outline" id="btn-update-<?= $c['key'] ?>" disabled onclick="updateCore('<?= $c['key'] ?>')">Сначала проверьте</button>
+                <button class="btn btn-sm" id="btn-check-cores" onclick="checkCores()">Проверить обновления</button>
             </div>
-            <?php endforeach; ?>
+            <div id="coresList">
+                <?php
+                $cores = [
+                    ['key'=>'xray',    'name'=>'Xray Core',    'desc'=>'Служба VLESS + Reality + xhttp'],
+                    ['key'=>'hysteria','name'=>'Hysteria 2',   'desc'=>'Служба QUIC (UDP) с высокой скоростью'],
+                    ['key'=>'mita',    'name'=>'Mita (Mieru)', 'desc'=>'Служба TCP мультиплексирования'],
+                    ['key'=>'caddy',   'name'=>'Caddy',        'desc'=>'Служба NaiveProxy + forward_proxy'],
+                ];
+                foreach ($cores as $c): ?>
+                <div class="cores-row" id="coreRow-<?= $c['key'] ?>">
+                    <div class="cores-info">
+                        <div class="cores-name"><?= $c['name'] ?></div>
+                        <div class="cores-desc"><?= $c['desc'] ?></div>
+                    </div>
+                    <span class="cores-ver" id="ver-<?= $c['key'] ?>">—</span>
+                    <button class="btn btn-sm btn-outline" id="btn-update-<?= $c['key'] ?>" disabled onclick="updateCore('<?= $c['key'] ?>')">Сначала проверьте</button>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card" id="changePasswordCard">
+            <div class="section-title">
+                <span class="icon">🔒</span> Безопасность
+            </div>
+            <form action="api/change_password.php" method="POST" id="formChangePassword">
+                <div class="fg">
+                    <label for="inputNewPassword">Новый пароль администратора</label>
+                    <input type="password" id="inputNewPassword" name="new_password" required minlength="6" placeholder="минимум 6 символов">
+                </div>
+                <button type="submit" class="btn" id="btnSubmitChangePassword" style="width:100%; justify-content:center;">Изменить пароль</button>
+            </form>
         </div>
     </div>
 

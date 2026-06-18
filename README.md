@@ -1,10 +1,11 @@
 # 🚀 VPN panel 5X-UEV
+### *«Ты бы сделал лучше, но сделал я»*
 
 [![License](https://img.shields.io/github/license/pasnya/vpn-panel-5x-uev?color=blue)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/pasnya/vpn-panel-5x-uev?color=purple)](https://github.com/pasnya/vpn-panel-5x-uev/releases)
 [![Telegram](https://img.shields.io/badge/Telegram-Join-blue.svg?logo=telegram)](https://t.me/)
 
-**VPN panel 5X-UEV** — это ультра-современная, легкая и быстрая веб-панель управления для мультипротокольного VPN/Proxy сервера. Панель создана с упором на максимальную простоту использования, высокую производительность и управление в режиме одного окна. Забудьте о сотнях перегруженных параметров: добавляйте домены и создавайте клиентов за пару секунд!
+**VPN panel 5X-UEV** — это ультра-современная, легкая и быстрая веб-панель управления для мультипротокольного VPN/Proxy сервера с поддержкой VLESS (Reality, xhttp), Hysteria 2, NaiveProxy и Mita (Mieru). Панель создана с упором на максимальную простоту использования, высокую производительность и управление в режиме одного окна. Забудьте о сотнях перегруженных параметров: добавляйте домены и создавайте клиентов за пару секунд!
 
 ---
 
