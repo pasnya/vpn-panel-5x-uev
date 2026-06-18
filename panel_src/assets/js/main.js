@@ -274,10 +274,9 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
     let html = `
         <div class="alert alert-info" style="margin-bottom: 18px;">
             <strong>Рекомендуемые приложения для подключения:</strong><br>
-            • <strong>Windows & Android:</strong> <a href="https://github.com/pasnya/anarise-vpn" target="_blank" style="color: #8bf3fa; text-decoration: underline; font-weight: bold;">Anarise VPN</a> (поддерживает VLESS, Hysteria 2, NaiveProxy).<br>
-            • <strong>iOS (iPhone):</strong> Shadowrocket, Streisand, Sing-box.<br>
-            • <strong>macOS:</strong> Nekoray / Nekobox, Sing-box.<br>
-            • <strong>Mieru (все ОС):</strong> Специальный клиент Mieru или Clash Meta (для Clash конфига).
+            • <strong>Windows & Android:</strong> Установите <a href="https://github.com/pasnya/anarise-vpn" target="_blank" style="color:var(--accent); font-weight:700; text-decoration:underline;">Anarise VPN</a> (поддерживает ВСЕ протоколы панели: VLESS, Hysteria 2, NaiveProxy, Mieru).<br>
+            • <strong>iOS (iPhone):</strong> Shadowrocket, Streisand или Sing-box.<br>
+            • <strong>macOS:</strong> Nekoray / Nekobox или Sing-box.
         </div>
     `;
 

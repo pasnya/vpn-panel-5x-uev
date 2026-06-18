@@ -64,8 +64,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/
 
 ## 📱 Поддерживаемые клиенты
 
-*   **Windows**: **[Anarise VPN](https://github.com/pasnya/anarise-vpn)** (рекомендуется) — универсальный клиент, поддерживает VLESS, Hysteria 2 и NaiveProxy.
-*   **Android**: **[Anarise VPN](https://github.com/pasnya/anarise-vpn)** (рекомендуется) — универсальный клиент, поддерживает VLESS, Hysteria 2 и NaiveProxy.
+*   **Windows**: **[Anarise VPN](https://github.com/pasnya/anarise-vpn)** (Рекомендуется — поддержка всех протоколов панели)
+*   **Android**: **[Anarise VPN](https://github.com/pasnya/anarise-vpn)** (Рекомендуется — поддержка всех протоколов панели)
 *   **iOS (iPhone)**: [Shadowrocket](https://apps.apple.com/us/app/shadowrocket/id932747118), [Streisand](https://apps.apple.com/ru/app/streisand/id6450534064), [Sing-box](https://apps.apple.com/us/app/sing-box/id6448301546)
 *   **macOS**: [Nekoray / Nekobox](https://github.com/MatsuriDayo/nekoray), [Sing-box](https://github.com/SagerNet/sing-box)
 
