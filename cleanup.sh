@@ -71,6 +71,11 @@ rm -rf /etc/mita
 rm -rf /etc/hysteria
 rm -rf /var/www/panel
 rm -rf /var/www/decoy
+rm -rf /root/panel_src
+rm -f /root/vpn-panel-5x-uev/panel_src/db/panel.db
+rm -f /root/vpn-panel-5x-uev/panel_src/db/paths.json
+rm -f panel_src/db/panel.db 2>/dev/null || true
+rm -f panel_src/db/paths.json 2>/dev/null || true
 
 # sudoers
 rm -f /etc/sudoers.d/panel
