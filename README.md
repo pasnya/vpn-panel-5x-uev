@@ -1,5 +1,5 @@
 # 🚀 VPN panel 5X-UEV
-### *«Ты бы сделал лучше, но сделал я»*
+### *«Ты бы сделал лучше, но пришлось делать мне»*
 
 [![License](https://img.shields.io/github/license/pasnya/vpn-panel-5x-uev?color=blue)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/pasnya/vpn-panel-5x-uev?color=purple)](https://github.com/pasnya/vpn-panel-5x-uev/releases)
