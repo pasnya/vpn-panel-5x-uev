@@ -40,7 +40,21 @@ apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--fo
 apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     curl wget git unzip zip socat sqlite3 jq libnginx-mod-stream \
     nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl openssl \
-    iptables-persistent netfilter-persistent redsocks cloudflare-warp wgcf
+    iptables-persistent netfilter-persistent redsocks
+
+# Cloudflare WARP repository
+log_info "Добавление репозитория Cloudflare WARP..."
+curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg 2>/dev/null
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ focal main" > /etc/apt/sources.list.d/cloudflare-client.list
+apt-get update -qq
+apt-get install -y cloudflare-warp
+
+# wgcf binary
+log_info "Установка wgcf..."
+if ! command -v wgcf &> /dev/null; then
+    curl -fsSL "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_amd64" -o /usr/local/bin/wgcf
+    chmod +x /usr/local/bin/wgcf
+fi
 
 PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
 PHP_SOCK="/run/php/php${PHP_VER}-fpm.sock"
@@ -112,6 +126,21 @@ usermod -aG www-data hysteria || true
 log_info "Настройка Cloudflare WARP..."
 systemctl enable warp-svc 2>/dev/null || true
 systemctl start warp-svc 2>/dev/null || true
+sleep 2
+
+# Register and connect WARP
+log_info "Регистрация в Cloudflare WARP..."
+warp-cli --accept-tos registration new 2>/dev/null || true
+warp-cli --accept-tos mode proxy 2>/dev/null || true
+warp-cli --accept-tos proxy port 40001 2>/dev/null || true
+warp-cli --accept-tos connect 2>/dev/null || true
+sleep 2
+WARP_STATUS=$(warp-cli --accept-tos status 2>/dev/null | head -1 || echo "")
+if echo "$WARP_STATUS" | grep -q "Connected"; then
+    log_success "Cloudflare WARP подключен."
+else
+    log_warn "WARP не подключен. Подключите вручную: warp-cli connect"
+fi
 
 # Redsocks config for transparent proxying
 cat > /etc/redsocks.conf << 'REDSOCKS_EOF'
@@ -141,6 +170,10 @@ useradd -r -s /usr/sbin/nologin -d /nonexistent vpn 2>/dev/null || true
 usermod -aG www-data vpn 2>/dev/null || true
 usermod -aG www-data mita 2>/dev/null || true
 usermod -aG www-data hysteria 2>/dev/null || true
+
+# Grant vpn user access to configs and certs
+chown -R root:vpn /etc/caddy 2>/dev/null || true
+chmod -R 775 /etc/caddy 2>/dev/null || true
 chmod -R g+rX /etc/letsencrypt /etc/xray /etc/mita /etc/caddy /etc/hysteria 2>/dev/null
 
 # cgroup vpn for fallback
@@ -495,8 +528,11 @@ chown www-data:www-data /var/www/html/index.html
 # ── Запуск служб ───────────────────────────────────────────────────────────
 log_info "Запуск системных служб..."
 systemctl daemon-reload
-systemctl enable nginx "$PHP_FPM_SERVICE" caddy xray mita hysteria-server warp-svc redsocks
-systemctl restart nginx "$PHP_FPM_SERVICE" caddy xray mita hysteria-server warp-svc redsocks
+systemctl enable nginx "$PHP_FPM_SERVICE" xray mita hysteria-server warp-svc caddy redsocks
+systemctl restart nginx "$PHP_FPM_SERVICE" xray mita hysteria-server
+systemctl restart warp-svc
+sleep 2
+systemctl restart caddy redsocks
 
 chgrp -R www-data /etc/letsencrypt || true
 chmod -R g+rX /etc/letsencrypt || true
@@ -515,9 +551,9 @@ grep -q "net.ipv4.tcp_congestion_control=bbr" /etc/sysctl.conf || echo "net.ipv4
 
 # ── iptables: Port Hopping для Hysteria ─────────────────────────────────────
 log_info "Настройка iptables для Hysteria 2 Port Hopping..."
-iptables -t nat -D PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443 2>/dev/null || true
-iptables -t nat -A PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443
-netfilter-persistent save
+iptables-legacy -t nat -D PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443 2>/dev/null || true
+iptables-legacy -t nat -A PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443
+netfilter-persistent save 2>/dev/null || true
 
 # ── Итог ────────────────────────────────────────────────────────────────────
 IPV4_SERVER=$(curl -4 -s --max-time 10 ifconfig.me || echo "IP_СЕРВЕРА")
