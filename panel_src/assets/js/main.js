@@ -204,7 +204,7 @@ function initSearchFilter() {
 function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword, realitySni, realitySid, xhttpPath) {
     let domain = domains.find(d => d.id == domain_id);
 
-    let serverIp = window.location.hostname;
+    let serverIp = window.panelServerIp || window.location.hostname;
     let mainDomain = domain ? domain.domain_name : '';
     let naiveSub = domain ? (domain.naive_sub || mainDomain) : '';
     let hasDomain = !!domain;

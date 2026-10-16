@@ -116,6 +116,8 @@ if ($xray_content) {
 }
 
 $ip_server = '127.0.0.1';
+$saved_ip = $paths_data['public_ip'] ?? '';
+if (filter_var($saved_ip, FILTER_VALIDATE_IP)) $ip_server = $saved_ip;
 $ip_cache_file = '/tmp/server_public_ip.txt';
 if (file_exists($ip_cache_file) && (time() - filemtime($ip_cache_file) < 86400)) {
     $ip_server = trim(file_get_contents($ip_cache_file));
@@ -134,7 +136,7 @@ if (file_exists($ip_cache_file) && (time() - filemtime($ip_cache_file) < 86400))
         $ip_server = trim($ext_ip);
         @file_put_contents($ip_cache_file, $ip_server);
     } else {
-        $ip_server = $_SERVER['SERVER_ADDR'] ?? $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
+        $ip_server = filter_var($saved_ip, FILTER_VALIDATE_IP) ? $saved_ip : ($_SERVER['SERVER_ADDR'] ?? '127.0.0.1');
         if (strpos($ip_server, ':') !== false) {
             $ip_server = explode(':', $ip_server)[0];
         }
@@ -579,6 +581,7 @@ foreach ($services as $srv) {
     </div>
 
 </div>
+<script>window.panelServerIp = <?= json_encode($ip_server, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
 <script src="assets/js/qrcode.min.js"></script>
 <script src="assets/js/main.js"></script>
 <?php if (count(array_filter($domains, static function ($d) { return in_array($d['ssl_status'], ['requesting', 'issuing'], true); })) > 0): ?>

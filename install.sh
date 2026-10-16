@@ -45,7 +45,7 @@ apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--fo
 apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     curl wget git unzip zip socat sqlite3 jq libnginx-mod-stream \
     nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl php-zip openssl ca-certificates gnupg \
-    iptables-persistent netfilter-persistent redsocks
+    iptables-persistent netfilter-persistent redsocks cron
 
 # Cloudflare WARP repository
 log_info "Добавление репозитория Cloudflare WARP..."
@@ -551,7 +551,7 @@ chown www-data:www-data /var/www/html/index.html
 # ── Запуск служб ───────────────────────────────────────────────────────────
 log_info "Запуск системных служб..."
 systemctl daemon-reload
-systemctl enable nginx "$PHP_FPM_SERVICE" xray mita hysteria-server warp-svc caddy redsocks
+systemctl enable nginx "$PHP_FPM_SERVICE" xray mita hysteria-server warp-svc caddy redsocks cron
 systemctl restart nginx "$PHP_FPM_SERVICE" xray mita hysteria-server
 systemctl restart warp-svc
 sleep 2
@@ -580,6 +580,11 @@ netfilter-persistent save 2>/dev/null || true
 
 # ── Итог ────────────────────────────────────────────────────────────────────
 IPV4_SERVER=$(curl -4 -s --max-time 10 ifconfig.me || echo "IP_СЕРВЕРА")
+if [[ "$IPV4_SERVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    jq --arg ip "$IPV4_SERVER" '.public_ip = $ip' /var/www/panel/db/paths.json > /var/www/panel/db/paths.json.tmp
+    mv /var/www/panel/db/paths.json.tmp /var/www/panel/db/paths.json
+    chown www-data:www-data /var/www/panel/db/paths.json
+fi
 
 log_success "Установка завершена успешно!"
 echo -e "\n=================================================================="
