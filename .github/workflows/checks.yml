@@ -6,7 +6,7 @@ jobs:
   syntax:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check shell syntax
         run: bash -n install.sh cleanup.sh panel_src/update_cores.sh
       - name: Check PHP syntax
