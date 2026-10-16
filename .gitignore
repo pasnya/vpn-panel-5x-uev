@@ -8,3 +8,5 @@
 !panel_src/
 !panel_src/**
 !.gitignore
+!.github/
+!.github/**

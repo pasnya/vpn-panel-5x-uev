@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Установочный скрипт мультипротокольной VPN/Proxy панели управления
-# Единый порт 443 + IP Админка | Ubuntu 20.04 / 22.04 / 24.04 (x86_64)
+# Единый порт 443 | Ubuntu 20.04 / 22.04 / 24.04 (amd64), 22.04 / 24.04 (arm64)
 # ==============================================================================
 
 set -euo pipefail
@@ -23,14 +23,19 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 ARCH=$(uname -m)
-if [[ "$ARCH" != "x86_64" ]]; then
-    log_error "Поддерживается только архитектура x86_64. Текущая: $ARCH"
+case "$ARCH" in
+    x86_64) DEB_ARCH=amd64 ;;
+    aarch64) DEB_ARCH=arm64 ;;
+    *) log_error "Неподдерживаемая архитектура: $ARCH" ;;
+esac
+. /etc/os-release
+if [[ "$ID" != "ubuntu" || ! "$VERSION_ID" =~ ^(20\.04|22\.04|24\.04)$ || ( "$DEB_ARCH" = arm64 && "$VERSION_ID" = 20.04 ) ]]; then
+    log_error "Неподдерживаемая комбинация Ubuntu и архитектуры: ${VERSION_ID}/${DEB_ARCH}"
 fi
 
 # ── Генерация секретов ──────────────────────────────────────────────────────
 ADMIN_SECRET=$(openssl rand -hex 12)
 CLIENT_UUID=$(cat /proc/sys/kernel/random/uuid)
-ADMIN_PORT=$((RANDOM % 50001 + 10000))
 XHTTP_PATH=$(openssl rand -hex 8)
 
 # ── Обновление пакетов и установка зависимостей ─────────────────────────────
@@ -39,20 +44,20 @@ apt-get update
 apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     curl wget git unzip zip socat sqlite3 jq libnginx-mod-stream \
-    nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl openssl \
+    nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl openssl ca-certificates gnupg \
     iptables-persistent netfilter-persistent redsocks
 
 # Cloudflare WARP repository
 log_info "Добавление репозитория Cloudflare WARP..."
 curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg 2>/dev/null
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ focal main" > /etc/apt/sources.list.d/cloudflare-client.list
+echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ ${VERSION_CODENAME} main" > /etc/apt/sources.list.d/cloudflare-client.list
 apt-get update -qq
 apt-get install -y cloudflare-warp
 
 # wgcf binary
 log_info "Установка wgcf..."
 if ! command -v wgcf &> /dev/null; then
-    curl -fsSL "https://github.com/ViRb3/wgcf/releases/download/v2.2.22/wgcf_2.2.22_linux_amd64" -o /usr/local/bin/wgcf
+    curl -fsSL "https://github.com/ViRb3/wgcf/releases/download/v2.3.0/wgcf_2.3.0_linux_${DEB_ARCH}" -o /usr/local/bin/wgcf
     chmod +x /usr/local/bin/wgcf
 fi
 
@@ -78,7 +83,7 @@ log_info "-> Ссылка на панель управления: /${ADMIN_SECRE
 cat > /var/www/panel/db/paths.json << EOF
 {
     "admin_path": "${ADMIN_SECRET}",
-    "admin_port": "${ADMIN_PORT}",
+    "admin_port": "8080",
     "xhttp_path": "${XHTTP_PATH}"
 }
 EOF
@@ -109,7 +114,7 @@ usermod -aG www-data xray || true
 # ── Установка Mieru (mita) ─────────────────────────────────────────────────
 log_info "Установка Mieru (mita)..."
 MITA_VERSION=$(curl -s https://api.github.com/repos/enfein/mieru/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
-MITA_DEB="mita_${MITA_VERSION}_amd64.deb"
+MITA_DEB="mita_${MITA_VERSION}_${DEB_ARCH}.deb"
 if wget -q "https://github.com/enfein/mieru/releases/download/v${MITA_VERSION}/${MITA_DEB}"; then
     dpkg -i "$MITA_DEB" || apt-get install -f -y
     rm -f "$MITA_DEB"
@@ -267,25 +272,6 @@ server {
     location / { return 403; }
 }
 
-server {
-    listen 0.0.0.0:${ADMIN_PORT} default_server;
-    server_name _;
-    root /var/www;
-    index index.php index.html;
-
-    location /${ADMIN_SECRET}/assets/ {
-        rewrite ^/${ADMIN_SECRET}/assets/(.*)$ /panel/assets/\$1 break;
-    }
-
-    location /${ADMIN_SECRET}/ {
-        root /var/www/panel;
-        rewrite ^/${ADMIN_SECRET}/(.*)$ /\$1 break;
-        include snippets/fastcgi-php.conf;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        fastcgi_pass unix:${PHP_SOCK};
-    }
-    location / { return 403; }
-}
 EOF
 
 # ── Caddy: дефолтный конфиг ─────────────────────────────────────────────────
@@ -426,16 +412,17 @@ sed -i "s/CHANGE_SALAMANDER_OBFS_PASSWORD/$SALAMANDER_PASS/g" /etc/hysteria/conf
 log_info "Настройка расширенных правил sudoers..."
 cat > /etc/sudoers.d/panel << 'EOF'
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
+www-data ALL=(root) NOPASSWD: /usr/sbin/nginx -t
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart xray
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart caddy
+www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart mita
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hysteria-server
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mita reload
-www-data ALL=(ALL) NOPASSWD: /usr/bin/certbot certonly *
-www-data ALL=(ALL) NOPASSWD: /usr/bin/chgrp -R www-data /etc/letsencrypt
-www-data ALL=(ALL) NOPASSWD: /usr/bin/chmod -R g+rX /etc/letsencrypt
-www-data ALL=(ALL) NOPASSWD: /bin/bash /var/www/panel/update_cores.sh *
+www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-certbot-helper *
+www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-update-cores update xray, /usr/local/sbin/vpn-update-cores update hysteria, /usr/local/sbin/vpn-update-cores update mita, /usr/local/sbin/vpn-update-cores update caddy
+www-data ALL=(root) NOPASSWD: /usr/bin/journalctl -u nginx -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u caddy -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u xray -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u mita -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u hysteria-server -n 100 --no-pager -o short-iso
 EOF
 echo "Defaults:www-data !use_pty" > /etc/sudoers.d/panel_pty
 chmod 440 /etc/sudoers.d/panel_pty
@@ -466,6 +453,29 @@ else
         log_error "Не удалось скачать файлы панели из GitHub репозитория."
     fi
 fi
+
+install -o root -g root -m 0755 /var/www/panel/update_cores.sh /usr/local/sbin/vpn-update-cores
+cat > /etc/cron.d/vpn-panel-expiry << 'EOF'
+*/5 * * * * www-data /usr/bin/php /var/www/panel/expire_clients.php >/dev/null 2>&1
+EOF
+chmod 644 /etc/cron.d/vpn-panel-expiry
+cat > /etc/cron.d/vpn-panel-cert << 'EOF'
+* * * * * www-data /usr/bin/php /var/www/panel/issue_domains.php >/dev/null 2>&1
+EOF
+chmod 644 /etc/cron.d/vpn-panel-cert
+cat > /usr/local/sbin/vpn-certbot-helper << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $# -eq 2 ]] || exit 2
+for domain in "$@"; do
+    [[ "$domain" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$ ]] || exit 2
+done
+/usr/bin/certbot certonly --webroot -w /var/www/html -d "$1" -d "$2" --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email --preferred-challenges http
+/usr/bin/chgrp -R www-data /etc/letsencrypt
+/usr/bin/chmod -R g+rX /etc/letsencrypt
+EOF
+chown root:root /usr/local/sbin/vpn-certbot-helper
+chmod 755 /usr/local/sbin/vpn-certbot-helper
 
 # ── SQLite3: инициализация БД ───────────────────────────────────────────────
 log_info "Инициализация SQLite3..."
@@ -504,7 +514,8 @@ CREATE TABLE IF NOT EXISTS domains (
 );
 EOF
 
-    ADMIN_PASS_HASH=$(php -r "echo password_hash('admin_password_change_me', PASSWORD_DEFAULT);")
+    ADMIN_PASSWORD=$(openssl rand -base64 24)
+    ADMIN_PASS_HASH=$(php -r 'echo password_hash($argv[1], PASSWORD_DEFAULT);' "$ADMIN_PASSWORD")
     ADMIN_UUID=$(cat /proc/sys/kernel/random/uuid)
     sqlite3 /var/www/panel/db/panel.db "INSERT OR IGNORE INTO users (username, password, uuid, role) VALUES ('admin', '$ADMIN_PASS_HASH', '$ADMIN_UUID', 'admin');"
 else
@@ -561,8 +572,8 @@ IPV4_SERVER=$(curl -4 -s --max-time 10 ifconfig.me || echo "IP_СЕРВЕРА")
 log_success "Установка завершена успешно!"
 echo -e "\n=================================================================="
 echo -e "Reality Public Key: $PUBLIC_KEY"
-echo -e "Прямой доступ к панели по внешнему IP-адресу сервера:"
-echo -e "URL: http://${IPV4_SERVER}:${ADMIN_PORT}/${ADMIN_SECRET}/index.php"
+echo -e "Админка доступна через SSH-туннель: ssh -L 8080:127.0.0.1:8080 root@${IPV4_SERVER}"
+echo -e "URL: http://127.0.0.1:8080/${ADMIN_SECRET}/index.php"
 echo -e "Логин: admin"
-echo -e "Пароль: admin_password_change_me"
+echo -e "Пароль: ${ADMIN_PASSWORD:-используйте ранее установленный пароль}"
 echo -e "=================================================================="

@@ -1,5 +1,9 @@
 <?php
 header('Content-Type: application/json');
+if (($_SERVER['REMOTE_ADDR'] ?? '') !== '127.0.0.1' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(403);
+    exit(json_encode(['ok' => false]));
+}
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {

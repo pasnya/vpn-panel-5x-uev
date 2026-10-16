@@ -1,0 +1,15 @@
+name: Checks
+on:
+  push:
+  pull_request:
+jobs:
+  syntax:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: bash -n install.sh cleanup.sh panel_src/update_cores.sh
+      - name: Check PHP syntax
+        run: find panel_src -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Check JavaScript syntax
+        run: node --check panel_src/assets/js/main.js

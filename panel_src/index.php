@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/api/security.php';
+panel_session();
 
 if (isset($_GET['logout'])) {
     session_destroy();
@@ -14,6 +15,7 @@ if (!isset($_SESSION['logged_in'])) {
         $stmt->execute([':username' => $_POST['login']]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($user && password_verify($_POST['password'], $user['password'])) {
+            session_regenerate_id(true);
             $_SESSION['logged_in'] = true;
             $_SESSION['username'] = $user['username'];
             header("Location: index.php");
@@ -81,6 +83,7 @@ if (empty($xhttp_path)) {
 }
 
 $domains = $db->query("SELECT * FROM domains ORDER BY domain_name")->fetchAll(PDO::FETCH_ASSOC);
+$active_domains = array_values(array_filter($domains, static function ($d) { return $d['ssl_status'] === 'active'; }));
 $users = $db->query("
     SELECT u.id, u.username, u.uuid, u.status, u.traffic_limit, u.traffic_used, u.created_at, u.expires_at,
            cc.domain_id
@@ -122,7 +125,7 @@ if (file_exists($ip_cache_file) && (time() - filemtime($ip_cache_file) < 86400))
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 2,
         CURLOPT_TIMEOUT => 3,
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => true,
     ]);
     $ext_ip = curl_exec($ch);
     curl_close($ch);
@@ -140,7 +143,7 @@ if (file_exists($ip_cache_file) && (time() - filemtime($ip_cache_file) < 86400))
         }
     }
 }
-$has_domain = !empty($domains);
+$has_domain = !empty($active_domains);
 
 /* ── Service status ── */
 $services = ['nginx', 'caddy', 'xray', 'mita', 'hysteria-server'];
@@ -155,6 +158,7 @@ foreach ($services as $srv) {
 <head>
     <meta charset="UTF-8">
     <title>VPN Dashboard — Панель управления</title>
+    <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -312,7 +316,16 @@ foreach ($services as $srv) {
                         <td><code class="mono"><?= htmlspecialchars(mb_substr($u['uuid'], 0, 8)) ?>…</code></td>
                         <td><span class="tag <?= $u['status'] === 'active' ? 'tag-ok' : 'tag-warn' ?>"><?= $u['status'] ?></span></td>
                         <td style="text-align: right;">
-                            <button class="btn btn-sm" id="btnConfigs-<?= htmlspecialchars($u['username']) ?>" onclick="showConfigs('<?= htmlspecialchars($u['username']) ?>','<?= htmlspecialchars($u['uuid']) ?>','<?= $u['domain_id'] ?>',<?= htmlspecialchars(json_encode($domains), ENT_QUOTES, 'UTF-8') ?>,'<?= $public_key ?>','<?= $obfs_password ?>','<?= $reality_sni ?>','<?= $reality_sid ?>','<?= htmlspecialchars($xhttp_path) ?>')">Конфиги</button>
+                            <button class="btn btn-sm" id="btnConfigs-<?= htmlspecialchars($u['username']) ?>" onclick="showConfigs('<?= htmlspecialchars($u['username']) ?>','<?= htmlspecialchars($u['uuid']) ?>','<?= $u['domain_id'] ?>',<?= htmlspecialchars(json_encode($active_domains), ENT_QUOTES, 'UTF-8') ?>,'<?= $public_key ?>','<?= $obfs_password ?>','<?= $reality_sni ?>','<?= $reality_sid ?>','<?= htmlspecialchars($xhttp_path) ?>')">Конфиги</button>
+                            <details style="display:inline-block;text-align:left"><summary class="btn btn-sm btn-outline">Изменить</summary>
+                                <form action="api/update_client.php" method="POST" style="padding:12px;min-width:220px">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                    <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+                                    <label>Статус <select name="status"><option value="active" <?= $u['status'] === 'active' ? 'selected' : '' ?>>Активен</option><option value="disabled" <?= $u['status'] === 'disabled' ? 'selected' : '' ?>>Отключён</option></select></label>
+                                    <label>Действует до <input type="date" name="expires_at" value="<?= htmlspecialchars($u['expires_at'] ? substr($u['expires_at'], 0, 10) : '') ?>"></label>
+                                    <button type="submit" class="btn btn-sm">Сохранить</button>
+                                </form>
+                            </details>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -327,6 +340,7 @@ foreach ($services as $srv) {
                 <span class="icon">👤</span> Новый клиент
             </div>
             <form action="api/add_client.php" method="POST" id="formAddClient">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                 <div class="fg">
                     <label for="inputClientName">Имя пользователя (латиница, цифры, подчёркивание)</label>
                     <input type="text" id="inputClientName" name="username" required pattern="[a-zA-Z0-9_-]+" placeholder="например, alex_vpn">
@@ -335,7 +349,7 @@ foreach ($services as $srv) {
                     <label for="selectClientDomain">Привязать домен (для xhttp, Naive, Hysteria)</label>
                     <select id="selectClientDomain" name="domain_id">
                         <option value="">— Без домена (только Reality по IP) —</option>
-                        <?php foreach ($domains as $d): ?>
+                        <?php foreach ($active_domains as $d): ?>
                             <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['domain_name']) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -378,6 +392,7 @@ foreach ($services as $srv) {
                             <th>Домен</th>
                             <th>Naive поддомен</th>
                             <th>SSL Статус</th>
+                            <th>Действия</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -385,7 +400,8 @@ foreach ($services as $srv) {
                     <tr id="domainRow-<?= htmlspecialchars($d['domain_name']) ?>">
                         <td><strong><?= htmlspecialchars($d['domain_name']) ?></strong></td>
                         <td><code class="mono"><?= htmlspecialchars($d['naive_sub']) ?></code></td>
-                        <td><span class="tag tag-ok">Активен</span></td>
+                        <td><span class="tag <?= $d['ssl_status'] === 'active' ? 'tag-ok' : 'tag-warn' ?>"><?= htmlspecialchars($d['ssl_status']) ?></span></td>
+                        <td><?php if ($d['ssl_status'] === 'error'): ?><form action="api/add_domain.php" method="POST"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>"><input type="hidden" name="domain" value="<?= htmlspecialchars($d['domain_name']) ?>"><input type="hidden" name="naive_sub" value="<?= htmlspecialchars($d['naive_sub']) ?>"><input type="hidden" name="decoy" value="<?= htmlspecialchars($d['decoy_type']) ?>"><button class="btn btn-sm" type="submit">Повторить</button></form><?php endif; ?></td>
                     </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -402,6 +418,7 @@ foreach ($services as $srv) {
                 <strong>Важно!</strong> Перед добавлением обязательно создайте A-записи домена и поддомена, указав в качестве значения внешний IP сервера: <code><?= htmlspecialchars($ip_server) ?></code>.
             </div>
             <form action="api/add_domain.php" method="POST" id="formAddDomain">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                 <div class="fg">
                     <label for="inputDomainName">Основной домен</label>
                     <input type="text" id="inputDomainName" name="domain" required placeholder="например, mysite.com">
@@ -418,7 +435,7 @@ foreach ($services as $srv) {
                         <option value="landing">Простой лендинг</option>
                     </select>
                 </div>
-                <button type="submit" class="btn" id="btnSubmitAddDomain" style="width:100%; justify-content:center;">Добавить и выпустить SSL</button>
+                <button type="submit" class="btn" id="btnSubmitAddDomain" style="width:100%; justify-content:center;">Поставить выпуск SSL в очередь</button>
             </form>
         </div>
     </div>
@@ -524,14 +541,24 @@ foreach ($services as $srv) {
         </div>
 
         <!-- Change Password -->
+        <div class="card" id="logsCard">
+            <div class="section-title"><span class="icon">📋</span> Журналы служб</div>
+            <select id="logService"><option>nginx</option><option>caddy</option><option>xray</option><option>mita</option><option>hysteria-server</option></select>
+            <button type="button" class="btn btn-sm" onclick="loadLogs()">Показать последние 100 строк</button>
+            <pre id="logsContent" style="white-space:pre-wrap;max-height:350px;overflow:auto"></pre>
+        </div>
+
+        <!-- Change Password -->
         <div class="card" id="changePasswordCard">
             <div class="section-title">
                 <span class="icon">🔒</span> Безопасность
             </div>
             <form action="api/change_password.php" method="POST" id="formChangePassword">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                <div class="fg"><label for="inputCurrentPassword">Текущий пароль</label><input type="password" id="inputCurrentPassword" name="current_password" required autocomplete="current-password"></div>
                 <div class="fg">
                     <label for="inputNewPassword">Новый пароль администратора</label>
-                    <input type="password" id="inputNewPassword" name="new_password" required minlength="6" placeholder="минимум 6 символов">
+                    <input type="password" id="inputNewPassword" name="new_password" required minlength="12" placeholder="минимум 12 символов">
                 </div>
                 <button type="submit" class="btn" id="btnSubmitChangePassword" style="width:100%; justify-content:center;">Изменить пароль</button>
             </form>
@@ -539,6 +566,10 @@ foreach ($services as $srv) {
     </div>
 
 </div>
+<script src="assets/js/qrcode.min.js"></script>
 <script src="assets/js/main.js"></script>
+<?php if (count(array_filter($domains, static function ($d) { return in_array($d['ssl_status'], ['requesting', 'issuing'], true); })) > 0): ?>
+<script>setTimeout(() => location.reload(), 15000);</script>
+<?php endif; ?>
 </body>
 </html>

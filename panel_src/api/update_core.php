@@ -1,9 +1,6 @@
 <?php
-session_start();
-if (!isset($_SESSION['logged_in'])) {
-    http_response_code(403);
-    exit(json_encode(["error" => "Forbidden"]));
-}
+require_once __DIR__ . '/security.php';
+require_admin();
 
 header('Content-Type: application/json');
 
@@ -18,6 +15,11 @@ if (!in_array($core, $allowed_cores) || !in_array($action, $allowed_actions)) {
     echo json_encode(["error" => "Invalid parameters"]);
     exit;
 }
+if ($action === 'update') require_admin(true);
+if ($action === 'update' && $core === 'all') {
+    http_response_code(400);
+    exit(json_encode(['error' => 'Update one core at a time']));
+}
 
 function curl_json($url) {
     $ch = curl_init($url);
@@ -26,7 +28,7 @@ function curl_json($url) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => true,
     ]);
     $resp = curl_exec($ch);
     curl_close($ch);
@@ -91,15 +93,16 @@ if ($action === 'check') {
     echo json_encode($result);
 
 } elseif ($action === 'update') {
-    $script = '/var/www/panel/update_cores.sh';
+    $script = '/usr/local/sbin/vpn-update-cores';
     if (!file_exists($script)) {
         http_response_code(500);
         echo json_encode(["success" => false, "error" => "Update script not found"]);
         exit;
     }
 
-    $cmd = "/usr/bin/sudo /bin/bash " . $script . " update " . escapeshellarg($core) . " 2>&1";
-    $output = shell_exec($cmd);
-    echo json_encode(["success" => true, "output" => $output]);
+    $cmd = "/usr/bin/sudo " . $script . " update " . escapeshellarg($core) . " 2>&1";
+    exec($cmd, $lines, $code);
+    if ($code !== 0) http_response_code(500);
+    echo json_encode(["success" => $code === 0, "output" => implode("\n", $lines)]);
 }
 ?>

@@ -101,7 +101,7 @@ do_update_mita() {
         echo "ERROR: Could not determine latest version"
         exit 1
     fi
-    local deb="mita_${latest}_amd64.deb"
+    local deb="mita_${latest}_$(dpkg --print-architecture).deb"
     cd /tmp
     wget -q "https://github.com/enfein/mieru/releases/download/v${latest}/${deb}" -O "$deb"
     dpkg -i "$deb" || apt-get install -f -y
@@ -112,12 +112,23 @@ do_update_mita() {
 
 do_update_caddy() {
     echo "Updating Caddy..."
+    local available_kb
+    available_kb=$(awk '/MemAvailable:|SwapFree:/ { total += $2 } END { print total+0 }' /proc/meminfo)
+    if [ "$available_kb" -lt 1572864 ]; then
+        echo "ERROR: At least 1.5 GiB of available memory and swap is required to build Caddy"
+        exit 1
+    fi
+    local build_dir
+    build_dir=$(mktemp -d)
+    cd "$build_dir"
     export GOPATH=$HOME/go
     export PATH=$PATH:$GOPATH/bin
     go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
     GOWORK=off xcaddy build --with github.com/caddyserver/forwardproxy@caddy2=github.com/klzgrad/forwardproxy@naive
     mv caddy /usr/local/bin/caddy
     chmod +x /usr/local/bin/caddy
+    cd /
+    rm -rf -- "$build_dir"
     systemctl restart caddy
     echo "Caddy updated to $(get_caddy_version)"
 }

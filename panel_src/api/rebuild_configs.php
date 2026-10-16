@@ -1,10 +1,20 @@
 <?php
+function panel_service_action(string $service, string $action): void {
+    $allowed = ['nginx' => ['reload'], 'caddy' => ['reload'], 'xray' => ['restart'], 'hysteria-server' => ['restart'], 'mita' => ['restart']];
+    if (!in_array($action, $allowed[$service] ?? [], true)) {
+        throw new RuntimeException('Unsupported service action');
+    }
+    exec('/usr/bin/sudo /usr/bin/systemctl ' . $action . ' ' . $service . ' 2>&1', $output, $code);
+    if ($code !== 0) {
+        throw new RuntimeException("Failed to $action $service: " . implode("\n", $output));
+    }
+}
+
 function rebuild_configs() {
-    try {
         $db = new PDO('sqlite:/var/www/panel/db/panel.db');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $all_users = $db->query("SELECT * FROM users WHERE role = 'client' AND status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
+        $all_users = $db->query("SELECT * FROM users WHERE role = 'client' AND status = 'active' AND (expires_at IS NULL OR expires_at >= datetime('now'))")->fetchAll(PDO::FETCH_ASSOC);
         $domains = $db->query("SELECT * FROM domains WHERE ssl_status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
 
         // --- CLOUDFLARE WARP CHECK (via warp-cli) ---
@@ -17,14 +27,15 @@ function rebuild_configs() {
         // --- VPN CGROUP FOR WARP ---
         if ($warp_enabled) {
             shell_exec('systemctl start redsocks 2>/dev/null');
-            shell_exec('/usr/local/bin/vpn-cgroup-assign.sh 2>/dev/null');
         }
 
         $paths_file = '/var/www/panel/db/paths.json';
         $admin_path = 'admin';
+        $xhttp_path = 'xhttp';
         if (file_exists($paths_file)) {
             $paths = json_decode(file_get_contents($paths_file), true);
             $admin_path = $paths['admin_path'] ?? $admin_path;
+            $xhttp_path = trim($paths['xhttp_path'] ?? $xhttp_path, '/');
         }
 
         $php_ver = PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;
@@ -33,6 +44,7 @@ function rebuild_configs() {
         // --- NGINX DOMAINS.MAP ---
         $map_content = "";
         foreach ($domains as $dom) {
+            $map_content .= $dom['domain_name'] . " nginx_web;\n";
             $map_content .= $dom['naive_sub'] . " caddy_naive;\n";
         }
         file_put_contents("/etc/nginx/conf.d/domains.map", $map_content);
@@ -66,7 +78,7 @@ server {
         fastcgi_pass unix:" . $php_sock . ";
     }
 
-    location /xhttp {
+    location /" . $xhttp_path . " {
         proxy_redirect off;
         proxy_pass http://127.0.0.1:10001;
         proxy_http_version 1.1;
@@ -102,7 +114,9 @@ server {
             }
         }
 
-        shell_exec("sudo /usr/bin/systemctl reload nginx");
+        exec('/usr/bin/sudo /usr/sbin/nginx -t 2>&1', $nginx_check, $nginx_code);
+        if ($nginx_code !== 0) throw new RuntimeException('Nginx config invalid: ' . implode("\n", $nginx_check));
+        panel_service_action('nginx', 'reload');
 
         // --- CADDY (NAIVE) ---
         $caddy_users_block = "";
@@ -130,7 +144,7 @@ server {
         }
 
         file_put_contents("/etc/caddy/Caddyfile", $caddyfile_content);
-        shell_exec("sudo /usr/bin/systemctl restart caddy");
+        panel_service_action('caddy', 'reload');
 
         // --- XRAY (REALITY + XHTTP) ---
         $xray_config_path = '/etc/xray/config.json';
@@ -147,7 +161,7 @@ server {
                         }
                     }
                     if (isset($inbound['port']) && $inbound['port'] == 10001) {
-                        $inbound['streamSettings']['xhttpSettings']['path'] = "/xhttp/";
+                        $inbound['streamSettings']['xhttpSettings']['path'] = "/" . $xhttp_path . "/";
                     }
                 }
                 unset($inbound);
@@ -157,7 +171,7 @@ server {
                 unset($xray_config['dns']);
 
                 file_put_contents($xray_config_path, json_encode($xray_config, JSON_PRETTY_PRINT));
-                shell_exec("sudo /usr/bin/systemctl restart xray");
+                panel_service_action('xray', 'restart');
             }
         }
 
@@ -186,8 +200,10 @@ server {
             $hysteria_yaml = preg_replace('/outbounds?:\s*\n(\s+.*\n)*/i', '', $hysteria_yaml);
             $hysteria_yaml = rtrim($hysteria_yaml);
 
-            file_put_contents($hysteria_config_path, $hysteria_yaml);
-            shell_exec("sudo /usr/bin/systemctl restart hysteria-server");
+            if ($hysteria_yaml !== file_get_contents($hysteria_config_path)) {
+                file_put_contents($hysteria_config_path, $hysteria_yaml);
+                panel_service_action('hysteria-server', 'restart');
+            }
         }
 
         // --- MITA ---
@@ -207,18 +223,14 @@ server {
                     $mita_config['users'][] = ["name" => "placeholder", "password" => "placeholder_pass_12345"];
                 }
                 file_put_contents($mita_config_path, json_encode($mita_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-                shell_exec("sudo /usr/bin/systemctl restart mita");
+                panel_service_action('mita', 'restart');
             }
         }
 
         // Re-assign VPN services to cgroup after restarts
         if ($warp_enabled) {
             sleep(2);
-            shell_exec('/usr/local/bin/vpn-cgroup-assign.sh 2>/dev/null');
         }
 
-    } catch (Exception $e) {
-        error_log("Rebuild config error: " . $e->getMessage());
-    }
 }
 ?>

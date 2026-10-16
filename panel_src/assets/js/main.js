@@ -203,7 +203,6 @@ function initSearchFilter() {
 // Config details display
 function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword, realitySni, realitySid, xhttpPath) {
     let domain = domains.find(d => d.id == domain_id);
-    if (!domain && domains.length > 0) domain = domains[0];
 
     let serverIp = window.location.hostname;
     let mainDomain = domain ? domain.domain_name : '';
@@ -218,6 +217,7 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
 
     let configs = [
         { id: 'link-vless-reality', label: 'VLESS + Reality', value: vlessReality, available: true, note: 'Не требует домен (работает через IP)' },
+        { id: 'link-subscription', label: 'Единая подписка', value: new URL('api/sub.php?token=' + encodeURIComponent(uuid), window.location.href).href, available: true },
     ];
 
     if (hasDomain) {
@@ -309,7 +309,7 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
                     </div>
                     <div id="qr-${cfg.id}" class="qr-container" style="display:none; text-align:center; padding: 12px 0 2px 0;">
                         <div style="background:#fff; padding:10px; display:inline-block; border-radius:8px;">
-                            <img id="qr-img-${cfg.id}" src="" alt="QR Code" style="width:160px; height:160px; display:block;">
+                            <div id="qr-img-${cfg.id}" aria-label="QR-код" style="width:160px; height:160px;"></div>
                         </div>
                         <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">Отсканируйте камерой телефона или в приложении</div>
                     </div>
@@ -333,12 +333,11 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
 
 function toggleQrCode(id, encodedValue) {
     const qrDiv = document.getElementById(`qr-${id}`);
-    const qrImg = document.getElementById(`qr-img-${id}`);
+    const qrContainer = document.getElementById(`qr-img-${id}`);
     
     if (qrDiv.style.display === 'none') {
         const decoded = decodeURIComponent(encodedValue);
-        // Using qrserver API to render QR Code
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(decoded)}`;
+        if (!qrContainer.hasChildNodes()) new QRCode(qrContainer, { text: decoded, width: 160, height: 160 });
         qrDiv.style.display = 'block';
     } else {
         qrDiv.style.display = 'none';
@@ -390,7 +389,7 @@ function restartService(name) {
     showToast(`Перезапуск ${name}...`);
     fetch('api/restart_service.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
         body: 'service=' + encodeURIComponent(name)
     })
     .then(r => r.json())
@@ -403,6 +402,16 @@ function restartService(name) {
         }
     })
     .catch(e => alert('Сетевая ошибка: ' + e));
+}
+
+function loadLogs() {
+    const service = document.getElementById('logService').value;
+    const out = document.getElementById('logsContent');
+    out.textContent = 'Загрузка...';
+    fetch('api/logs.php?service=' + encodeURIComponent(service))
+        .then(r => r.text().then(text => ({ ok: r.ok, text })))
+        .then(result => { out.textContent = result.text; })
+        .catch(() => { out.textContent = 'Не удалось загрузить журнал'; });
 }
 
 function checkCores() {
@@ -452,9 +461,10 @@ function updateCore(core) {
     btn.disabled = true;
     btn.textContent = 'Обновление...';
     showToast(`Обновление ${labels[core]}...`);
-    fetch(`api/update_core.php?action=update&core=${core}`)
+    fetch(`api/update_core.php?action=update&core=${core}`, { method: 'POST', headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content } })
         .then(r => r.json())
-        .then(() => {
+        .then(data => {
+            if (!data.success) throw new Error(data.output || 'Ошибка обновления');
             showToast(`${labels[core]} успешно обновлено!`);
             checkCores();
         })
@@ -538,7 +548,7 @@ function registerWarp() {
     }
     showToast('Регистрация устройства в Cloudflare WARP...');
     
-    fetch('api/warp.php?action=register', { method: 'POST' })
+    fetch('api/warp.php?action=register', { method: 'POST', headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content } })
         .then(r => r.json())
         .then(d => {
             if (d.success) {
@@ -559,7 +569,7 @@ function registerWarp() {
 
 function toggleWarp() {
     showToast('Изменение состояния WARP...');
-    fetch('api/warp.php?action=toggle', { method: 'POST' })
+    fetch('api/warp.php?action=toggle', { method: 'POST', headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content } })
         .then(r => r.json())
         .then(d => {
             if (d.success) {
@@ -576,7 +586,7 @@ function setWarpMode(mode) {
     showToast('Сохранение режима...');
     fetch('api/warp.php?action=set_mode', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
         body: 'mode=' + encodeURIComponent(mode)
     })
     .then(r => r.json())
@@ -594,7 +604,7 @@ function setWarpMode(mode) {
 function deleteWarp() {
     if (!confirm('Вы действительно хотите удалить подключение к Cloudflare WARP? Все настройки маршрутизации и WireGuard будут стерты.')) return;
     showToast('Удаление WARP...');
-    fetch('api/warp.php?action=delete', { method: 'POST' })
+    fetch('api/warp.php?action=delete', { method: 'POST', headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content } })
         .then(r => r.json())
         .then(d => {
             if (d.success) {

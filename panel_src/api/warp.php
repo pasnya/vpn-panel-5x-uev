@@ -1,12 +1,7 @@
 <?php
-session_start();
+require_once __DIR__ . '/security.php';
 header('Content-Type: application/json');
-
-if (!isset($_SESSION['logged_in'])) {
-    http_response_code(403);
-    echo json_encode(["success" => false, "message" => "Forbidden"]);
-    exit;
-}
+require_admin();
 
 $warp_file = '/var/www/panel/db/warp.json';
 
@@ -21,6 +16,7 @@ $action = $_GET['action'] ?? '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? $action;
 }
+if ($action !== 'status') require_admin(true);
 
 try {
     if ($action === 'register') {
@@ -65,7 +61,7 @@ try {
                 'Content-Type: application/json',
                 'CF-Client-Version: a-6.30-3596'
             ],
-            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_TIMEOUT => 15
         ]);
         
