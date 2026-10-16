@@ -6,6 +6,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+PANEL_REF="v0.6.0"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -452,7 +453,7 @@ if [ -d "panel_src" ]; then
 else
     log_info "Локальная папка panel_src не найдена. Клонирование из GitHub репозитория..."
     TEMP_DIR=$(mktemp -d)
-    if git clone https://github.com/pasnya/vpn-panel-5x-uev.git "$TEMP_DIR"; then
+    if git clone --depth 1 --branch "$PANEL_REF" https://github.com/pasnya/vpn-panel-5x-uev.git "$TEMP_DIR"; then
         cp -pRL "$TEMP_DIR/panel_src/." /var/www/panel/
         rm -rf "$TEMP_DIR"
         log_success "Исходные файлы панели успешно скачаны и скопированы в /var/www/panel."

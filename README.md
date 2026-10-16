@@ -44,7 +44,7 @@
 Для автоматической установки всех зависимостей, настройки веб-сервера Nginx, сборки Caddy с NaiveProxy, установки Xray Core, Mieru, Hysteria 2 и развертывания веб-панели запустите следующую команду в терминале вашего сервера:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.6.0/install.sh)"
 ```
 
 ### После завершения установки вы получите:
