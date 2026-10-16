@@ -10,6 +10,12 @@ function panel_service_action(string $service, string $action): void {
     }
 }
 
+function panel_write(string $path, string $content): void {
+    if (file_put_contents($path, $content, LOCK_EX) !== strlen($content)) {
+        throw new RuntimeException('Failed to write ' . $path);
+    }
+}
+
 function rebuild_configs() {
         $db = new PDO('sqlite:/var/www/panel/db/panel.db');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -29,7 +35,7 @@ function rebuild_configs() {
 
         // --- VPN CGROUP FOR WARP ---
         if ($warp_enabled) {
-            shell_exec('systemctl start redsocks 2>/dev/null');
+            shell_exec('sudo /usr/bin/systemctl start redsocks 2>/dev/null');
         }
 
         $paths_file = '/var/www/panel/db/paths.json';
@@ -50,7 +56,7 @@ function rebuild_configs() {
             $map_content .= $dom['domain_name'] . " nginx_web;\n";
             $map_content .= $dom['naive_sub'] . " caddy_naive;\n";
         }
-        file_put_contents("/etc/nginx/conf.d/domains.map", $map_content);
+        panel_write("/etc/nginx/conf.d/domains.map", $map_content);
 
         // --- NGINX SITE CONFIGS ---
         foreach ($domains as $dom) {
@@ -106,7 +112,7 @@ server {
     }
 }";
 
-            file_put_contents($nginx_conf, $conf);
+            panel_write($nginx_conf, $conf);
 
             $symlink = "/etc/nginx/sites-enabled/" . $d_name;
             if (file_exists($symlink) || is_link($symlink)) { @unlink($symlink); }
@@ -153,7 +159,7 @@ server {
             $caddyfile_content .= "    root * /var/www/decoy/" . $d_name . "\n    file_server\n}\n";
         }
 
-        file_put_contents("/etc/caddy/Caddyfile", $caddyfile_content);
+        panel_write("/etc/caddy/Caddyfile", $caddyfile_content);
         panel_service_action('caddy', 'reload');
 
         // --- XRAY (REALITY + XHTTP) ---
@@ -186,7 +192,7 @@ server {
                 if (!$has_api) $xray_config['inbounds'][] = ["tag" => "api", "listen" => "127.0.0.1", "port" => 10085, "protocol" => "dokodemo-door", "settings" => ["address" => "127.0.0.1"]];
                 unset($xray_config['dns']);
 
-                file_put_contents($xray_config_path, json_encode($xray_config, JSON_PRETTY_PRINT));
+                panel_write($xray_config_path, json_encode($xray_config, JSON_PRETTY_PRINT));
                 panel_service_action('xray', 'restart');
             }
         }
@@ -217,7 +223,7 @@ server {
             $hysteria_yaml = rtrim($hysteria_yaml);
 
             if ($hysteria_yaml !== file_get_contents($hysteria_config_path)) {
-                file_put_contents($hysteria_config_path, $hysteria_yaml);
+                panel_write($hysteria_config_path, $hysteria_yaml);
                 panel_service_action('hysteria-server', 'restart');
             }
         }
@@ -238,7 +244,7 @@ server {
                 } else {
                     $mita_config['users'][] = ["name" => "placeholder", "password" => "placeholder_pass_12345"];
                 }
-                file_put_contents($mita_config_path, json_encode($mita_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                panel_write($mita_config_path, json_encode($mita_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
                 panel_service_action('mita', 'restart');
             }
         }

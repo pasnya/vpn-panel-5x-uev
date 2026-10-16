@@ -428,6 +428,7 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart caddy
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart mita
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hysteria-server
+www-data ALL=(root) NOPASSWD: /usr/bin/systemctl start redsocks
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mita reload
 www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-certbot-helper *
 www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-update-cores update xray, /usr/local/sbin/vpn-update-cores update hysteria, /usr/local/sbin/vpn-update-cores update mita, /usr/local/sbin/vpn-update-cores update caddy
