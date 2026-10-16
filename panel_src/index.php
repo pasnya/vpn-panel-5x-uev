@@ -323,6 +323,8 @@ foreach ($services as $srv) {
                                     <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                                     <label>Статус <select name="status"><option value="active" <?= $u['status'] === 'active' ? 'selected' : '' ?>>Активен</option><option value="disabled" <?= $u['status'] === 'disabled' ? 'selected' : '' ?>>Отключён</option></select></label>
                                     <label>Действует до <input type="date" name="expires_at" value="<?= htmlspecialchars($u['expires_at'] ? substr($u['expires_at'], 0, 10) : '') ?>"></label>
+                                    <label>Лимит Xray, ГиБ <input type="number" step="0.1" min="0" name="traffic_limit_gb" value="<?= htmlspecialchars((string)round($u['traffic_limit'] / 1073741824, 1)) ?>"></label>
+                                    <small>Использовано: <?= htmlspecialchars((string)round($u['traffic_used'] / 1073741824, 2)) ?> ГиБ</small>
                                     <button type="submit" class="btn btn-sm">Сохранить</button>
                                 </form>
                             </details>
@@ -546,6 +548,17 @@ foreach ($services as $srv) {
             <select id="logService"><option>nginx</option><option>caddy</option><option>xray</option><option>mita</option><option>hysteria-server</option></select>
             <button type="button" class="btn btn-sm" onclick="loadLogs()">Показать последние 100 строк</button>
             <pre id="logsContent" style="white-space:pre-wrap;max-height:350px;overflow:auto"></pre>
+        </div>
+
+        <div class="card" id="backupCard">
+            <div class="section-title"><span class="icon">💾</span> Резервная копия</div>
+            <p>Архив содержит учётные данные и ключи. Храните его в защищённом месте.</p>
+            <a class="btn btn-sm" href="api/backup.php">Скачать копию</a>
+            <form action="api/restore.php" method="POST" enctype="multipart/form-data" style="margin-top:16px">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                <label>Восстановить на этом сервере <input type="file" name="backup" accept=".zip,application/zip" required></label>
+                <button type="submit" class="btn btn-sm">Восстановить</button>
+            </form>
         </div>
 
         <!-- Change Password -->

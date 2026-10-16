@@ -3,6 +3,13 @@ declare(strict_types=1);
 
 function panel_session(): void {
     if (session_status() !== PHP_SESSION_ACTIVE) {
+        ini_set('session.use_strict_mode', '1');
+        session_set_cookie_params([
+            'httponly' => true,
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'samesite' => 'Lax',
+            'path' => '/',
+        ]);
         session_start();
     }
     if (empty($_SESSION['csrf_token'])) {

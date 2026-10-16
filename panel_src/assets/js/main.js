@@ -217,10 +217,10 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
 
     let configs = [
         { id: 'link-vless-reality', label: 'VLESS + Reality', value: vlessReality, available: true, note: 'Не требует домен (работает через IP)' },
-        { id: 'link-subscription', label: 'Единая подписка', value: new URL('api/sub.php?token=' + encodeURIComponent(uuid), window.location.href).href, available: true },
     ];
 
     if (hasDomain) {
+        configs.push({ id: 'link-subscription', label: 'Единая подписка', value: `https://${mainDomain}/sub/${encodeURIComponent(uuid)}`, available: true });
         let vlessXhttp = `vless://${uuid}@${serverIp}:443?security=tls&sni=${mainDomain}&fp=chrome&type=xhttp&host=${mainDomain}&path=${pathName}&alpn=h2,http/1.1#XHTTP-${username}`;
         let naiveLink = `naive+https://${username}:${uuid}@${naiveSub}:443#Naive-${username}`;
         let hysteriaLink = `hysteria2://${uuid}@${serverIp}:443?obfs-password=${obfsPassword}&security=tls&sni=${mainDomain}&alpn=h3,h2,http/1.1#Hysteria-${username}`;

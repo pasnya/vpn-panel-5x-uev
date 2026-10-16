@@ -13,6 +13,9 @@ function panel_service_action(string $service, string $action): void {
 function rebuild_configs() {
         $db = new PDO('sqlite:/var/www/panel/db/panel.db');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        require_once __DIR__ . '/traffic.php';
+        collect_xray_traffic($db);
+        $db->exec("UPDATE users SET status = 'disabled' WHERE role = 'client' AND status = 'active' AND ((expires_at IS NOT NULL AND expires_at < datetime('now')) OR (traffic_limit > 0 AND traffic_used >= traffic_limit))");
 
         $all_users = $db->query("SELECT * FROM users WHERE role = 'client' AND status = 'active' AND (expires_at IS NULL OR expires_at >= datetime('now'))")->fetchAll(PDO::FETCH_ASSOC);
         $domains = $db->query("SELECT * FROM domains WHERE ssl_status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
@@ -75,6 +78,13 @@ server {
         rewrite ^/" . $admin_path . "/(.*)$ /\$1 break;
         include snippets/fastcgi-php.conf;
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        fastcgi_pass unix:" . $php_sock . ";
+    }
+
+    location ~ ^/sub/([a-fA-F0-9-]{36})$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/panel/api/sub.php;
+        fastcgi_param QUERY_STRING token=\$1;
         fastcgi_pass unix:" . $php_sock . ";
     }
 
@@ -155,7 +165,7 @@ server {
                     if (isset($inbound['protocol']) && $inbound['protocol'] == 'vless') {
                         $inbound['settings']['clients'] = [];
                         foreach ($all_users as $u) {
-                            $client = ["id" => $u['uuid']];
+                            $client = ["id" => $u['uuid'], "email" => $u['username']];
                             if ($inbound['port'] == 10002) { $client["flow"] = "xtls-rprx-vision"; }
                             $inbound['settings']['clients'][] = $client;
                         }
@@ -167,7 +177,13 @@ server {
                 unset($inbound);
 
                 $xray_config['outbounds'] = [["protocol" => "freedom"]];
-                unset($xray_config['routing']);
+                $xray_config['api'] = ["tag" => "api", "services" => ["StatsService"]];
+                $xray_config['stats'] = new stdClass();
+                $xray_config['policy'] = ["levels" => ["0" => ["statsUserUplink" => true, "statsUserDownlink" => true]]];
+                $xray_config['routing'] = ["rules" => [["type" => "field", "inboundTag" => ["api"], "outboundTag" => "api"]]];
+                $has_api = false;
+                foreach ($xray_config['inbounds'] as $inbound) if (($inbound['tag'] ?? '') === 'api') $has_api = true;
+                if (!$has_api) $xray_config['inbounds'][] = ["tag" => "api", "listen" => "127.0.0.1", "port" => 10085, "protocol" => "dokodemo-door", "settings" => ["address" => "127.0.0.1"]];
                 unset($xray_config['dns']);
 
                 file_put_contents($xray_config_path, json_encode($xray_config, JSON_PRETTY_PRINT));

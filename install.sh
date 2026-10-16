@@ -44,7 +44,7 @@ apt-get update
 apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     curl wget git unzip zip socat sqlite3 jq libnginx-mod-stream \
-    nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl openssl ca-certificates gnupg \
+    nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl php-zip openssl ca-certificates gnupg \
     iptables-persistent netfilter-persistent redsocks
 
 # Cloudflare WARP repository
@@ -64,6 +64,7 @@ fi
 PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
 PHP_SOCK="/run/php/php${PHP_VER}-fpm.sock"
 PHP_FPM_SERVICE="php${PHP_VER}-fpm"
+sed -i 's/^upload_max_filesize = .*/upload_max_filesize = 20M/; s/^post_max_size = .*/post_max_size = 22M/' "/etc/php/${PHP_VER}/fpm/php.ini"
 
 # ── Структура директорий ────────────────────────────────────────────────────
 log_info "Создание структуры директорий..."
@@ -324,11 +325,14 @@ PRIVATE_KEY=$(echo "$REALITY_KEYS" | grep -i "privatekey" | awk -F': ' '{print $
 PUBLIC_KEY=$(echo "$REALITY_KEYS" | grep -i "publickey" | awk -F': ' '{print $2}' | tr -d ' \r\n')
 echo "$PUBLIC_KEY" > /etc/xray/public.key
 chmod 644 /etc/xray/public.key
+chgrp www-data /etc/xray/public.key
+chmod 664 /etc/xray/public.key
 
 cat > /etc/xray/config.json << EOF
 {
   "log": { "loglevel": "warning" },
   "inbounds": [
+    { "tag": "api", "listen": "127.0.0.1", "port": 10085, "protocol": "dokodemo-door", "settings": { "address": "127.0.0.1" } },
     {
       "port": 10001,
       "listen": "127.0.0.1",
@@ -357,7 +361,11 @@ cat > /etc/xray/config.json << EOF
       }
     }
   ],
-  "outbounds": [{ "protocol": "freedom" }]
+  "outbounds": [{ "protocol": "freedom" }],
+  "api": { "tag": "api", "services": ["StatsService"] },
+  "stats": {},
+  "policy": { "levels": { "0": { "statsUserUplink": true, "statsUserDownlink": true } } },
+  "routing": { "rules": [{ "type": "field", "inboundTag": ["api"], "outboundTag": "api" }] }
 }
 EOF
 mkdir -p /usr/local/etc/xray
@@ -459,6 +467,10 @@ cat > /etc/cron.d/vpn-panel-expiry << 'EOF'
 */5 * * * * www-data /usr/bin/php /var/www/panel/expire_clients.php >/dev/null 2>&1
 EOF
 chmod 644 /etc/cron.d/vpn-panel-expiry
+cat > /etc/cron.d/vpn-panel-traffic << 'EOF'
+*/5 * * * * www-data /usr/bin/php /var/www/panel/traffic_monitor.php >/dev/null 2>&1
+EOF
+chmod 644 /etc/cron.d/vpn-panel-traffic
 cat > /etc/cron.d/vpn-panel-cert << 'EOF'
 * * * * * www-data /usr/bin/php /var/www/panel/issue_domains.php >/dev/null 2>&1
 EOF

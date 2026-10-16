@@ -58,6 +58,8 @@ rm -f /usr/local/bin/caddy
 rm -f /usr/local/bin/xray
 rm -f /usr/local/bin/hysteria
 rm -f /usr/bin/mita
+rm -f /usr/local/sbin/vpn-update-cores /usr/local/sbin/vpn-certbot-helper
+rm -f /etc/cron.d/vpn-panel-expiry /etc/cron.d/vpn-panel-traffic /etc/cron.d/vpn-panel-cert
 dpkg -r mita 2>/dev/null || true
 apt-get purge -y mita 2>/dev/null || true
 
