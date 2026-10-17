@@ -22,6 +22,7 @@ if ! command -v node >/dev/null || [[ $(node -p 'process.versions.node.split("."
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
 fi
+NODE_BIN=$(command -v node)
 
 if [[ ! -x /usr/local/bin/xray ]]; then
     export XRAY_INSTALL_NONINTERACTIVE=1
@@ -178,7 +179,7 @@ const [file, apiToken, passwordHash, publicIp, panelPort, openvpnPort] = process
 fs.writeFileSync(file, JSON.stringify({ apiToken, passwordHash, publicIp, panelPort: Number(panelPort), openvpnPort: Number(openvpnPort) }, null, 2), { mode: 0o600 });
 NODE
 
-cat > /etc/systemd/system/vpn-relay-panel.service <<'SYSTEMD'
+cat > /etc/systemd/system/vpn-relay-panel.service <<SYSTEMD
 [Unit]
 Description=VPN relay control panel
 After=network-online.target
@@ -186,7 +187,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/node /opt/vpn-relay/server.js
+ExecStart=$NODE_BIN /opt/vpn-relay/server.js
 Restart=on-failure
 RestartSec=3
 WorkingDirectory=/opt/vpn-relay
