@@ -40,11 +40,20 @@ def write_state(value):
     temporary.replace(STATE_FILE)
 
 
+def retire():
+    # Keep the final log available briefly, then close the root web service.
+    subprocess.run(["/usr/bin/systemctl", "disable", "vpn-panel-installer.service"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    (ROOT / "token").unlink(missing_ok=True)
+    os._exit(0)
+
+
 def finish(process, output):
     result = process.wait()
     output.close()
     with LOCK:
         write_state({"state": "done" if result == 0 else "failed", "exit_code": result})
+    threading.Timer(3600, retire).start()
 
 
 PAGE = """<!doctype html>
@@ -60,7 +69,7 @@ button:disabled{opacity:.55;cursor:default}pre{background:#0a111b;border-radius:
 <main><section><h1>Установка VPN panel 5X-UEV</h1>
 <p>Файлы установщика уже скачаны на сервер. Нажмите кнопку, чтобы установить панель и необходимые службы. Обычно это занимает несколько минут.</p>
 <p id="state">Проверяю состояние…</p><button id="start" disabled>Начать установку</button>
-<p class="hint">Не закрывайте эту вкладку во время установки. После завершения сохраните адрес панели и пароль администратора из журнала.</p>
+<p class="hint">Не закрывайте эту вкладку во время установки. После завершения сохраните адрес панели и пароль администратора из журнала. Веб-инсталлятор закроется через час.</p>
 <p id="error"></p><div id="logbox"><h2>Ход установки</h2><pre id="log"></pre></div>
 </section></main>
 <script>
@@ -157,6 +166,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    if read_state()["state"] in ("done", "failed"):
+        threading.Timer(3600, retire).start()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(str(ROOT / "tls.crt"), str(ROOT / "tls.key"))

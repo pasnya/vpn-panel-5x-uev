@@ -15,6 +15,27 @@ jobs:
         run: find panel_src -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Check JavaScript syntax
         run: node --check panel_src/assets/js/main.js && node --check proxy_panel/server.js
+  web-installer-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare browser installer without starting full installation
+        run: |
+          sudo env PANEL_REF="${{ github.head_ref || github.ref_name }}" bash install.sh > /tmp/web-bootstrap.log 2>&1 || {
+            tail -n 40 /tmp/web-bootstrap.log
+            exit 1
+          }
+          sudo systemctl is-active --quiet vpn-panel-installer.service
+          test ! -e /var/www/panel/db/panel.db
+          token=$(sudo cat /opt/vpn-panel-installer/token)
+          for attempt in {1..20}; do
+            if curl --silent --fail --insecure "https://127.0.0.1:8444/api/status?token=$token" | jq -e '.state == "ready"' >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          sudo journalctl -u vpn-panel-installer.service -n 40 --no-pager
+          exit 1
   relay-install-smoke:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
