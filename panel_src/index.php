@@ -176,6 +176,12 @@ foreach ($services as $srv) {
     </div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['relay_sync_error'])): ?>
+    <div class="alert alert-warn" style="margin-top:15px;margin-bottom:0">
+        Изменение профиля сохранено. Прокладка пока недоступна для обновления; если связь не восстановится, её выход автоматически остановится в течение трёх минут.
+    </div>
+    <?php endif; ?>
+
     <!-- Topbar -->
     <div class="topbar" id="mainTopbar">
         <div class="topbar-left">
@@ -203,6 +209,24 @@ foreach ($services as $srv) {
             <p>Создайте A-записи для домена и поддомена NaiveProxy с IP <code><?= htmlspecialchars($ip_server) ?></code>. Затем добавьте домен в разделе ниже. После выпуска сертификата новые профили смогут использовать xHTTP, Hysteria 2 и NaiveProxy.</p>
             <a href="#addDomainCard">Перейти к домену</a>
         </details>
+    </div>
+
+    <!-- Separate OpenVPN relay server -->
+    <div class="card" id="relayCard">
+        <div class="section-title"><span class="icon">🔗</span> Сервер-прокладка</div>
+        <p>Клиенты подключаются к прокладке по OpenVPN. Она передаёт трафик на этот VPN-сервер через доступный протокол.</p>
+        <div id="relayNotConnected">
+            <p>На втором VPS с Ubuntu запустите установщик. Он выдаст строку для связи.</p>
+            <pre class="cfg-code-block">bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.7.0/proxy_panel/install.sh)"</pre>
+            <div class="fg"><label for="relayPairCode">Строка подключения прокладки</label><input id="relayPairCode" type="password" autocomplete="off" placeholder="Вставьте строку из установщика"></div>
+            <button type="button" class="btn" id="relayConnectButton" onclick="connectRelay()">Подключить прокладку</button>
+        </div>
+        <div id="relayConnected" hidden>
+            <p id="relayStatusText">Проверка состояния…</p>
+            <button type="button" class="btn btn-sm btn-outline" onclick="refreshRelayStatus()">Проверить</button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="disconnectRelay()">Отключить</button>
+        </div>
+        <div id="relayError" class="alert alert-warn" hidden></div>
     </div>
 
     <!-- Services -->
@@ -284,7 +308,7 @@ foreach ($services as $srv) {
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                 <div class="fg">
                     <label for="inputClientName">Название профиля</label>
-                    <input type="text" id="inputClientName" name="username" required pattern="[a-zA-Z0-9_-]+" placeholder="например, alex_vpn">
+                    <input type="text" id="inputClientName" name="username" required maxlength="48" pattern="[a-zA-Z0-9_-]+" placeholder="например, alex_vpn">
                 </div>
                 <p style="font-size:13px;color:var(--text-dim)">Понадобится только название. Панель сама выберет готовый домен; без домена создаст профиль Reality.</p>
                 <details>
@@ -524,7 +548,7 @@ foreach ($services as $srv) {
 
 </div>
 <script>window.panelServerIp = <?= json_encode($ip_server, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
-<script>window.justCreatedClientId = <?= isset($_GET['created']) ? (int)$_GET['created'] : 0 ?>;</script>
+    <script>window.justCreatedClientId = <?= isset($_GET['created']) ? (int)$_GET['created'] : 0 ?>; window.relayConnected = <?= is_file('/var/www/panel/db/proxy_panel.json') ? 'true' : 'false' ?>;</script>
 <script src="assets/js/qrcode.min.js"></script>
 <script src="assets/js/main.js"></script>
 <?php if (count(array_filter($domains, static function ($d) { return in_array($d['ssl_status'], ['requesting', 'issuing'], true); })) > 0): ?>

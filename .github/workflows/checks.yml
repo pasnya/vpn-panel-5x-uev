@@ -8,8 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Check shell syntax
-        run: bash -n install.sh cleanup.sh panel_src/update_cores.sh
+        run: bash -n install.sh cleanup.sh panel_src/update_cores.sh proxy_panel/install.sh proxy_panel/balancer.sh proxy_panel/check-client.sh
       - name: Check PHP syntax
         run: find panel_src -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Check JavaScript syntax
-        run: node --check panel_src/assets/js/main.js
+        run: node --check panel_src/assets/js/main.js && node --check proxy_panel/server.js

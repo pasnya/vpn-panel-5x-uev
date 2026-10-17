@@ -6,7 +6,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-PANEL_REF="v0.6.0"
+PANEL_REF="v0.7.0"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -473,6 +473,10 @@ cat > /etc/cron.d/vpn-panel-traffic << 'EOF'
 */5 * * * * www-data /usr/bin/php /var/www/panel/traffic_monitor.php >/dev/null 2>&1
 EOF
 chmod 644 /etc/cron.d/vpn-panel-traffic
+cat > /etc/cron.d/vpn-panel-relay << 'EOF'
+* * * * * www-data /usr/bin/php /var/www/panel/relay_sync.php >/dev/null 2>&1
+EOF
+chmod 644 /etc/cron.d/vpn-panel-relay
 cat > /etc/cron.d/vpn-panel-cert << 'EOF'
 * * * * * www-data /usr/bin/php /var/www/panel/issue_domains.php >/dev/null 2>&1
 EOF

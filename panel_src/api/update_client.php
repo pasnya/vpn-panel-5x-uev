@@ -13,11 +13,25 @@ if (!$id || !in_array($status, ['active', 'disabled'], true) || ($expires !== ''
 
 try {
     $db = new PDO('sqlite:/var/www/panel/db/panel.db', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $nameStmt = $db->prepare("SELECT username FROM users WHERE id = ? AND role = 'client'");
+    $nameStmt->execute([$id]);
+    $name = $nameStmt->fetchColumn();
+    if (!$name) throw new RuntimeException('Профиль не найден');
+    require_once __DIR__ . '/proxy_transport.php';
+    $relay = relay_settings();
     $stmt = $db->prepare("UPDATE users SET status = ?, expires_at = ?, traffic_limit = ? WHERE id = ? AND role = 'client'");
     $stmt->execute([$status, $expires === '' ? null : $expires . ' 23:59:59', (int)round($limitGb * 1073741824), $id]);
     require_once __DIR__ . '/rebuild_configs.php';
     rebuild_configs();
-    header('Location: ../index.php');
+    $relaySyncError = false;
+    if ($relay) {
+        try { relay_sync_clients($db, $relay); }
+        catch (Throwable $syncError) {
+            error_log('Relay sync failed: ' . $syncError->getMessage());
+            $relaySyncError = true;
+        }
+    }
+    header('Location: ../index.php' . ($relaySyncError ? '?relay_sync_error=1' : ''));
 } catch (Throwable $e) {
     error_log('Client update failed: ' . $e->getMessage());
     http_response_code(500);

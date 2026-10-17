@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
 
     // Валидация логина
     $username = preg_replace('/[^a-zA-Z0-9_-]/', '', $username);
-    if (empty($username)) {
+    if (empty($username) || strlen($username) > 48 || strtolower($username) === 'server') {
         die("Неверное имя пользователя");
     }
 

@@ -23,7 +23,7 @@ function rebuild_configs() {
         collect_xray_traffic($db);
         $db->exec("UPDATE users SET status = 'disabled' WHERE role = 'client' AND status = 'active' AND ((expires_at IS NOT NULL AND expires_at < datetime('now')) OR (traffic_limit > 0 AND traffic_used >= traffic_limit))");
 
-        $all_users = $db->query("SELECT * FROM users WHERE role = 'client' AND status = 'active' AND (expires_at IS NULL OR expires_at >= datetime('now'))")->fetchAll(PDO::FETCH_ASSOC);
+        $all_users = $db->query("SELECT * FROM users WHERE role IN ('client', 'relay') AND status = 'active' AND (expires_at IS NULL OR expires_at >= datetime('now'))")->fetchAll(PDO::FETCH_ASSOC);
         $domains = $db->query("SELECT * FROM domains WHERE ssl_status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
 
         // --- CLOUDFLARE WARP CHECK (via warp-cli) ---

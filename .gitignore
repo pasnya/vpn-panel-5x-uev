@@ -9,6 +9,8 @@
 !docs/**
 !panel_src/
 !panel_src/**
+!proxy_panel/
+!proxy_panel/**
 !.gitignore
 !.github/
 !.github/**

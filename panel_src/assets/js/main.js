@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     initSearchFilter();
     fetchWarpStatus();
+    refreshRelayStatus();
     if (window.justCreatedClientId) {
         const button = document.querySelector(`[data-client-id="${window.justCreatedClientId}"]`);
         if (button) button.click();
@@ -117,8 +118,14 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
     const primary = hasDomain ? configs.find(cfg => cfg.id === 'link-subscription') : configs[0];
     let html = `<div class="alert alert-info" style="margin-bottom:18px">
         <strong>Готово. Добавьте профиль в VPN-приложение.</strong><br>
-        ${hasDomain ? 'Скопируйте подписку или откройте QR-код. В подписке собраны доступные подключения.' : 'Скопируйте ссылку Reality или откройте QR-код. Домен для этого не нужен.'}
+        ${window.relayConnected ? 'Скачайте файл OpenVPN для подключения через прокладку.' : (hasDomain ? 'Скопируйте подписку или откройте QR-код. В подписке собраны доступные подключения.' : 'Скопируйте ссылку Reality или откройте QR-код. Домен для этого не нужен.')}
     </div>
+    ${window.relayConnected ? `<form method="post" action="api/proxy_panel.php" style="margin:12px 0 20px">
+        <input type="hidden" name="csrf_token" value="${document.querySelector('meta[name="csrf-token"]').content}">
+        <input type="hidden" name="action" value="download">
+        <input type="hidden" name="username" value="${escapeHtml(username)}">
+        <button class="btn" type="submit">Скачать OpenVPN для прокладки</button>
+    </form><details style="margin:16px 0"><summary>Подключиться напрямую к основному серверу</summary>` : ''}
     <div class="cfg-row">
         <div class="cfg-header"><span class="cfg-label">${primary.label}</span>
             <div style="display:flex;gap:8px">
@@ -180,13 +187,74 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
             </div>`;
         }
     });
-    html += '</details>';
+    html += '</details>' + (window.relayConnected ? '</details>' : '');
 
     document.getElementById('configsContent').innerHTML = html;
     document.getElementById('configTitle').innerHTML = `<span class="icon">🔑</span> Подключение: <strong>${escapeHtml(username)}</strong>`;
     let panel = document.getElementById('configsPanel');
     panel.classList.add('open');
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function relayRequest(action, values = null) {
+    const options = values === null ? {} : {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+        body: new URLSearchParams({ action, ...values })
+    };
+    const url = 'api/proxy_panel.php' + (values === null ? '?action=' + encodeURIComponent(action) : '');
+    const response = await fetch(url, options);
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Ошибка связи с прокладкой');
+    return result;
+}
+
+async function refreshRelayStatus() {
+    const card = document.getElementById('relayCard');
+    if (!card) return;
+    try {
+        const result = await relayRequest('status');
+        window.relayConnected = result.connected;
+        document.getElementById('relayNotConnected').hidden = result.connected;
+        document.getElementById('relayConnected').hidden = !result.connected;
+        const error = document.getElementById('relayError');
+        error.hidden = !result.error;
+        error.textContent = result.error || '';
+        if (result.connected && result.status) {
+            const state = result.status;
+            document.getElementById('relayStatusText').textContent =
+                `OpenVPN: ${state.openvpn ? 'работает' : 'не работает'} · Канал: ${state.active || 'не найден'} · Связь панелей: ${state.controlFresh ? 'работает' : 'потеряна'} · IP: ${result.host}`;
+        }
+    } catch (error) {
+        const box = document.getElementById('relayError');
+        box.hidden = false;
+        box.textContent = error.message;
+    }
+}
+
+async function connectRelay() {
+    const code = document.getElementById('relayPairCode').value.trim();
+    if (!code) return;
+    const button = document.getElementById('relayConnectButton');
+    button.disabled = true;
+    button.textContent = 'Связываю серверы…';
+    try {
+        await relayRequest('connect', { pair_code: code });
+        document.getElementById('relayPairCode').value = '';
+        location.reload();
+    } catch (error) {
+        const box = document.getElementById('relayError');
+        box.hidden = false;
+        box.textContent = error.message;
+        button.disabled = false;
+        button.textContent = 'Подключить прокладку';
+    }
+}
+
+async function disconnectRelay() {
+    if (!confirm('Отключить прокладку? Пользовательские профили на основном сервере останутся.')) return;
+    try { await relayRequest('disconnect', {}); location.reload(); }
+    catch (error) { alert(error.message); }
 }
 
 function toggleQrCode(id, encodedValue) {
