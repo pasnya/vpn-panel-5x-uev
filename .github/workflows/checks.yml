@@ -24,8 +24,14 @@ jobs:
             tail -n 80 /tmp/relay-install.log
             exit 1
           }
-          sudo systemctl is-active --quiet openvpn@server.service
-          sudo systemctl is-active --quiet vpn-relay-panel.service
+          if ! sudo systemctl is-active --quiet openvpn@server.service; then
+            sudo journalctl -u openvpn@server.service -n 80 --no-pager
+            exit 1
+          fi
+          if ! sudo systemctl is-active --quiet vpn-relay-panel.service; then
+            sudo journalctl -u vpn-relay-panel.service -n 80 --no-pager
+            exit 1
+          fi
       - name: Check relay API
         run: |
           token=$(sudo jq -r .apiToken /opt/vpn-relay/settings.json)
