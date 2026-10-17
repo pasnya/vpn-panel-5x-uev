@@ -3,8 +3,14 @@
 
 # Whitelist allowed files and folders
 !install.sh
+!full_install.sh
+!web_installer.py
 !cleanup.sh
 !README.md
+!tests/
+!tests/**
+tests/__pycache__/
+__pycache__/
 !docs/
 !docs/**
 !panel_src/

@@ -8,7 +8,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Check shell syntax
-        run: bash -n install.sh cleanup.sh panel_src/update_cores.sh proxy_panel/install.sh proxy_panel/balancer.sh proxy_panel/check-client.sh
+        run: bash -n install.sh full_install.sh cleanup.sh panel_src/update_cores.sh proxy_panel/install.sh proxy_panel/balancer.sh proxy_panel/check-client.sh
+      - name: Check web installer
+        run: python3 -m py_compile web_installer.py && python3 tests/test_web_installer.py
       - name: Check PHP syntax
         run: find panel_src -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Check JavaScript syntax
