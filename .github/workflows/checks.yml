@@ -36,4 +36,6 @@ jobs:
         run: |
           token=$(sudo jq -r .apiToken /opt/vpn-relay/settings.json)
           pin=$(sudo openssl x509 -in /opt/vpn-relay/tls.crt -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl base64 -A)
-          curl --silent --fail --insecure --pinnedpubkey "sha256//$pin" --header "Authorization: Bearer $token" https://127.0.0.1:8443/api/status | jq -e '.openvpn == true and .paired == false'
+          served_pin=$(echo | openssl s_client -connect 127.0.0.1:8443 2>/dev/null | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl base64 -A)
+          test "$pin" = "$served_pin"
+          curl --silent --show-error --fail --insecure --header "Authorization: Bearer $token" https://127.0.0.1:8443/api/status | jq -e '.openvpn == true and .paired == false'
