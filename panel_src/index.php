@@ -192,80 +192,17 @@ foreach ($services as $srv) {
         </div>
     </div>
 
-    <!-- Interactive Setup Wizard -->
+    <!-- Short first-run path; domain setup is available when additional protocols are needed. -->
     <div class="card wizard-card" id="wizardCard">
-        <div class="wizard-header">
-            <div class="wizard-title">
-                <span class="icon">🚀</span> Интерактивный помощник настройки
-            </div>
-            <button class="wizard-collapse-btn" id="wizardCollapseBtn">Свернуть</button>
-        </div>
-        <div id="wizardBody">
-            <div class="stepper">
-                <div class="stepper-progress" id="stepperProgress"></div>
-                <div class="step-node active" id="stepNode-1" onclick="goToStep(1)">
-                    <div class="step-circle">1</div>
-                    <div class="step-label">DNS записи</div>
-                </div>
-                <div class="step-node" id="stepNode-2" onclick="goToStep(2)">
-                    <div class="step-circle">2</div>
-                    <div class="step-label">Домен</div>
-                </div>
-                <div class="step-node" id="stepNode-3" onclick="goToStep(3)">
-                    <div class="step-circle">3</div>
-                    <div class="step-label">Клиент</div>
-                </div>
-                <div class="step-node" id="stepNode-4" onclick="goToStep(4)">
-                    <div class="step-circle">4</div>
-                    <div class="step-label">Конфиги</div>
-                </div>
-            </div>
-            
-            <div class="wizard-content">
-                <!-- Slide 1: DNS -->
-                <div class="wizard-slide active" id="wizardSlide-1">
-                    <h4>Шаг 1: Настройка DNS А-записей</h4>
-                    <p>Перед началом добавления домена перейдите на сайт вашего DNS-провайдера (Cloudflare, Reg.ru и др.) и создайте следующие записи:</p>
-                    <div class="alert alert-info" style="margin-bottom: 0;">
-                        1. <strong>A-запись</strong> для основного домена (например, <code>example.com</code>) → направьте на IP <code><?= htmlspecialchars($ip_server) ?></code><br>
-                        2. <strong>A-запись</strong> для Naiveподдомена (например, <code>n.example.com</code>) → направьте на IP <code><?= htmlspecialchars($ip_server) ?></code>
-                    </div>
-                </div>
-                
-                <!-- Slide 2: Domain -->
-                <div class="wizard-slide" id="wizardSlide-2">
-                    <h4>Шаг 2: Привязка домена к серверу</h4>
-                    <p>После настройки DNS прокрутите вниз к разделу <strong>"Добавить домен"</strong> и введите данные:</p>
-                    <p>• Введите <em>Основной домен</em> (тот, что вы привязали на шаге 1, например, <code>example.com</code>).<br>
-                    • Укажите <em>Поддомен NaiveProxy</em> (например, <code>n.example.com</code>).<br>
-                    • Нажмите <strong>"Добавить и выпустить SSL"</strong>. Система автоматически получит сертификаты от Let's Encrypt и перезапустит веб-сервер.</p>
-                </div>
-                
-                <!-- Slide 3: Client -->
-                <div class="wizard-slide" id="wizardSlide-3">
-                    <h4>Шаг 3: Создание пользователя (клиента)</h4>
-                    <p>Для создания пользователя перейдите к форме <strong>"Новый клиент"</strong>:</p>
-                    <p>• Введите уникальное имя пользователя (латинские буквы и цифры).<br>
-                    • Выберите добавленный домен из выпадающего списка (если домен не добавлен, будет доступен только протокол <em>VLESS + Reality</em>, который работает напрямую по IP).<br>
-                    • Нажмите кнопку <strong>"Создать"</strong>.</p>
-                </div>
-                
-                <!-- Slide 4: Configs -->
-                <div class="wizard-slide" id="wizardSlide-4">
-                    <h4>Шаг 4: Получение и импорт конфигураций</h4>
-                    <p>Поздравляем, конфигурация создана!</p>
-                    <p>• Найдите пользователя в таблице <strong>"Клиенты"</strong>.<br>
-                    • Нажмите кнопку <strong>"Конфиги"</strong> напротив его имени.<br>
-                    • В открывшейся панели скопируйте нужную ссылку или откройте **QR-код** для быстрого сканирования телефоном.<br>
-                    • Импортируйте ссылку в ваше VPN-приложение (Nekobox, v2rayN, Shadowrocket или Sing-box).</p>
-                </div>
-            </div>
-            
-            <div class="wizard-actions">
-                <button class="btn btn-sm btn-outline" id="wizardBack" onclick="prevStep()">Назад</button>
-                <button class="btn btn-sm" id="wizardNext" onclick="nextStep()">Далее</button>
-            </div>
-        </div>
+        <div class="section-title"><span class="icon">🚀</span> Быстрый старт</div>
+        <p><strong>1.</strong> Введите название в разделе «Новый VPN-профиль» и нажмите «Создать профиль».</p>
+        <p><strong>2.</strong> Панель сразу покажет ссылку и QR-код. Добавьте профиль в VPN-приложение.</p>
+        <a class="btn btn-sm" href="#addClientCard">Создать первый профиль</a>
+        <details style="margin-top:14px">
+            <summary>Хочу подключить домен и дополнительные протоколы</summary>
+            <p>Создайте A-записи для домена и поддомена NaiveProxy с IP <code><?= htmlspecialchars($ip_server) ?></code>. Затем добавьте домен в разделе ниже. После выпуска сертификата новые профили смогут использовать xHTTP, Hysteria 2 и NaiveProxy.</p>
+            <a href="#addDomainCard">Перейти к домену</a>
+        </details>
     </div>
 
     <!-- Services -->
@@ -318,7 +255,7 @@ foreach ($services as $srv) {
                         <td><code class="mono"><?= htmlspecialchars(mb_substr($u['uuid'], 0, 8)) ?>…</code></td>
                         <td><span class="tag <?= $u['status'] === 'active' ? 'tag-ok' : 'tag-warn' ?>"><?= $u['status'] ?></span></td>
                         <td style="text-align: right;">
-                            <button class="btn btn-sm" id="btnConfigs-<?= htmlspecialchars($u['username']) ?>" onclick="showConfigs('<?= htmlspecialchars($u['username']) ?>','<?= htmlspecialchars($u['uuid']) ?>','<?= $u['domain_id'] ?>',<?= htmlspecialchars(json_encode($active_domains), ENT_QUOTES, 'UTF-8') ?>,'<?= $public_key ?>','<?= $obfs_password ?>','<?= $reality_sni ?>','<?= $reality_sid ?>','<?= htmlspecialchars($xhttp_path) ?>')">Конфиги</button>
+                            <button class="btn btn-sm" id="btnConfigs-<?= htmlspecialchars($u['username']) ?>" data-client-id="<?= (int)$u['id'] ?>" onclick="showConfigs('<?= htmlspecialchars($u['username']) ?>','<?= htmlspecialchars($u['uuid']) ?>','<?= $u['domain_id'] ?>',<?= htmlspecialchars(json_encode($active_domains), ENT_QUOTES, 'UTF-8') ?>,'<?= $public_key ?>','<?= $obfs_password ?>','<?= $reality_sni ?>','<?= $reality_sid ?>','<?= htmlspecialchars($xhttp_path) ?>')">Подключить</button>
                             <details style="display:inline-block;text-align:left"><summary class="btn btn-sm btn-outline">Изменить</summary>
                                 <form action="api/update_client.php" method="POST" style="padding:12px;min-width:220px">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
@@ -341,30 +278,35 @@ foreach ($services as $srv) {
 
         <div class="card" id="addClientCard">
             <div class="section-title">
-                <span class="icon">👤</span> Новый клиент
+                <span class="icon">👤</span> Новый VPN-профиль
             </div>
             <form action="api/add_client.php" method="POST" id="formAddClient">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                 <div class="fg">
-                    <label for="inputClientName">Имя пользователя (латиница, цифры, подчёркивание)</label>
+                    <label for="inputClientName">Название профиля</label>
                     <input type="text" id="inputClientName" name="username" required pattern="[a-zA-Z0-9_-]+" placeholder="например, alex_vpn">
                 </div>
+                <p style="font-size:13px;color:var(--text-dim)">Понадобится только название. Панель сама выберет готовый домен; без домена создаст профиль Reality.</p>
+                <details>
+                    <summary>Выбрать домен вручную</summary>
                 <div class="fg">
                     <label for="selectClientDomain">Привязать домен (для xhttp, Naive, Hysteria)</label>
                     <select id="selectClientDomain" name="domain_id">
+                        <option value="auto">Автоматически</option>
                         <option value="">— Без домена (только Reality по IP) —</option>
                         <?php foreach ($active_domains as $d): ?>
                             <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['domain_name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+                </details>
                 <?php if (!$has_domain): ?>
                 <div class="alert alert-warn" style="font-size:12px; margin-bottom: 14px; padding: 10px 14px;" id="noDomainWarning">
                     Домен не добавлен. Будет доступен только протокол <strong>VLESS + Reality</strong>.<br>
                     Чтобы использовать остальные протоколы, сначала привяжите домен ниже.
                 </div>
                 <?php endif; ?>
-                <button type="submit" class="btn" id="btnSubmitAddClient" style="width:100%; justify-content:center;">Создать клиента</button>
+                <button type="submit" class="btn" id="btnSubmitAddClient" style="width:100%; justify-content:center;">Создать профиль</button>
             </form>
         </div>
     </div>
@@ -582,6 +524,7 @@ foreach ($services as $srv) {
 
 </div>
 <script>window.panelServerIp = <?= json_encode($ip_server, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
+<script>window.justCreatedClientId = <?= isset($_GET['created']) ? (int)$_GET['created'] : 0 ?>;</script>
 <script src="assets/js/qrcode.min.js"></script>
 <script src="assets/js/main.js"></script>
 <?php if (count(array_filter($domains, static function ($d) { return in_array($d['ssl_status'], ['requesting', 'issuing'], true); })) > 0): ?>

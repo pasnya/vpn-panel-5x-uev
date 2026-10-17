@@ -1,169 +1,11 @@
-// Onboarding Wizard Stepper Logic
-let currentWizardStep = 1;
-const totalSteps = 4;
-
 document.addEventListener('DOMContentLoaded', () => {
-    initWizard();
     initSearchFilter();
     fetchWarpStatus();
+    if (window.justCreatedClientId) {
+        const button = document.querySelector(`[data-client-id="${window.justCreatedClientId}"]`);
+        if (button) button.click();
+    }
 });
-
-function initWizard() {
-    // Check if wizard was collapsed before
-    const isCollapsed = localStorage.getItem('vpn_wizard_collapsed') === 'true';
-    const savedStep = localStorage.getItem('vpn_wizard_step');
-    
-    if (savedStep) {
-        currentWizardStep = parseInt(savedStep, 10);
-    }
-    
-    const wCard = document.getElementById('wizardCard');
-    const wCollapseBtn = document.getElementById('wizardCollapseBtn');
-    const wBody = document.getElementById('wizardBody');
-    
-    if (isCollapsed) {
-        wBody.style.display = 'none';
-        wCollapseBtn.textContent = 'Развернуть';
-    } else {
-        wBody.style.display = 'block';
-        wCollapseBtn.textContent = 'Свернуть';
-    }
-    
-    wCollapseBtn.addEventListener('click', () => {
-        const collapsed = wBody.style.display === 'none';
-        if (collapsed) {
-            wBody.style.display = 'block';
-            wCollapseBtn.textContent = 'Свернуть';
-            localStorage.setItem('vpn_wizard_collapsed', 'false');
-            highlightStepElement(currentWizardStep);
-        } else {
-            wBody.style.display = 'none';
-            wCollapseBtn.textContent = 'Развернуть';
-            localStorage.setItem('vpn_wizard_collapsed', 'true');
-        }
-    });
-
-    goToStep(currentWizardStep);
-}
-
-function updateStepperUI() {
-    // Update step nodes
-    for (let i = 1; i <= totalSteps; i++) {
-        const node = document.getElementById(`stepNode-${i}`);
-        if (!node) continue;
-        
-        node.className = 'step-node';
-        if (i === currentWizardStep) {
-            node.classList.add('active');
-        } else if (i < currentWizardStep) {
-            node.classList.add('completed');
-        }
-    }
-    
-    // Update progress bar width
-    const progressWidth = ((currentWizardStep - 1) / (totalSteps - 1)) * 100;
-    const bar = document.getElementById('stepperProgress');
-    if (bar) {
-        bar.style.width = `${progressWidth}%`;
-    }
-    
-    // Show current slide
-    for (let i = 1; i <= totalSteps; i++) {
-        const slide = document.getElementById(`wizardSlide-${i}`);
-        if (slide) {
-            slide.classList.toggle('active', i === currentWizardStep);
-        }
-    }
-    
-    // Disable/enable back/next buttons
-    const btnBack = document.getElementById('wizardBack');
-    const btnNext = document.getElementById('wizardNext');
-    
-    if (btnBack) btnBack.disabled = (currentWizardStep === 1);
-    if (btnNext) {
-        if (currentWizardStep === totalSteps) {
-            btnNext.textContent = 'Готово';
-        } else {
-            btnNext.textContent = 'Далее';
-        }
-    }
-}
-
-function nextStep() {
-    if (currentWizardStep < totalSteps) {
-        currentWizardStep++;
-        localStorage.setItem('vpn_wizard_step', currentWizardStep);
-        updateStepperUI();
-        highlightStepElement(currentWizardStep);
-    } else {
-        // Complete wizard
-        document.getElementById('wizardBody').style.display = 'none';
-        document.getElementById('wizardCollapseBtn').textContent = 'Развернуть';
-        localStorage.setItem('vpn_wizard_collapsed', 'true');
-        showToast('Помощник скрыт. Вы можете развернуть его в любой момент.');
-    }
-}
-
-function prevStep() {
-    if (currentWizardStep > 1) {
-        currentWizardStep--;
-        localStorage.setItem('vpn_wizard_step', currentWizardStep);
-        updateStepperUI();
-        highlightStepElement(currentWizardStep);
-    }
-}
-
-function goToStep(step) {
-    if (step >= 1 && step <= totalSteps) {
-        currentWizardStep = step;
-        localStorage.setItem('vpn_wizard_step', currentWizardStep);
-        updateStepperUI();
-        highlightStepElement(step);
-    }
-}
-
-function highlightStepElement(step) {
-    // Remove all previous highlight classes
-    document.querySelectorAll('.flash-highlight').forEach(el => el.classList.remove('flash-highlight'));
-    
-    let target = null;
-    switch(step) {
-        case 1:
-            target = document.getElementById('serverIpInfo');
-            break;
-        case 2:
-            target = document.getElementById('addDomainCard');
-            break;
-        case 3:
-            target = document.getElementById('addClientCard');
-            break;
-        case 4:
-            target = document.getElementById('clientsCard');
-            break;
-    }
-    
-    if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        target.classList.add('flash-highlight');
-        // Add CSS dynamic animation style inline if not in style.css
-        if (!document.getElementById('flash-style')) {
-            const s = document.createElement('style');
-            s.id = 'flash-style';
-            s.innerHTML = `
-                @keyframes flashGlow {
-                    0%, 100% { border-color: var(--border); box-shadow: none; }
-                    50% { border-color: var(--accent); box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); }
-                }
-                .flash-highlight {
-                    animation: flashGlow 2s ease-in-out infinite;
-                }
-            `;
-            document.head.appendChild(s);
-        }
-    }
-}
-
-// Client Search Filter
 function initSearchFilter() {
     const searchInput = document.getElementById('clientSearch');
     if (!searchInput) return;
@@ -272,16 +114,31 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
         );
     }
 
-    let html = `
-        <div class="alert alert-info" style="margin-bottom: 18px;">
-            <strong>Рекомендуемые приложения для подключения:</strong><br>
-            • <strong>Windows & Android:</strong> Установите <a href="https://github.com/pasnya/anarise-vpn" target="_blank" style="color:var(--accent); font-weight:700; text-decoration:underline;">Anarise VPN</a> (поддерживает ВСЕ протоколы панели: VLESS, Hysteria 2, NaiveProxy, Mieru).<br>
-            • <strong>iOS (iPhone):</strong> Shadowrocket, Streisand или Sing-box.<br>
-            • <strong>macOS:</strong> Nekoray / Nekobox или Sing-box.
+    const primary = hasDomain ? configs.find(cfg => cfg.id === 'link-subscription') : configs[0];
+    let html = `<div class="alert alert-info" style="margin-bottom:18px">
+        <strong>Готово. Добавьте профиль в VPN-приложение.</strong><br>
+        ${hasDomain ? 'Скопируйте подписку или откройте QR-код. В подписке собраны доступные подключения.' : 'Скопируйте ссылку Reality или откройте QR-код. Домен для этого не нужен.'}
+    </div>
+    <div class="cfg-row">
+        <div class="cfg-header"><span class="cfg-label">${primary.label}</span>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-sm btn-outline" onclick="toggleQrCode('${primary.id}', '${encodeURIComponent(primary.value)}')">QR-код</button>
+                <button class="btn btn-sm" onclick="copy('${primary.id}')">Скопировать</button>
+            </div>
         </div>
-    `;
+        <div class="cfg-code-container"><code class="cfg-code" id="${primary.id}">${escapeHtml(primary.value)}</code></div>
+        <div id="qr-${primary.id}" class="qr-container" style="display:none;text-align:center;padding:12px 0 2px 0">
+            <div style="background:#fff;padding:10px;display:inline-block;border-radius:8px"><div id="qr-img-${primary.id}" aria-label="QR-код" style="width:160px;height:160px"></div></div>
+        </div>
+    </div>
+    <details style="margin-top:16px"><summary>Другие протоколы и ручная настройка</summary>
+        <div class="alert alert-info" style="margin-top:14px;margin-bottom:14px">
+            Windows и Android: <a href="https://github.com/pasnya/anarise-vpn" target="_blank" rel="noopener noreferrer">Anarise VPN</a>.
+            iPhone: Shadowrocket, Streisand или Sing-box. macOS: Nekoray, Nekobox или Sing-box.
+        </div>`;
 
     configs.forEach(cfg => {
+        if (cfg.id === primary.id) return;
         if (cfg.available) {
             if (cfg.isBlock) {
                 html += `
@@ -323,9 +180,10 @@ function showConfigs(username, uuid, domain_id, domains, publicKey, obfsPassword
             </div>`;
         }
     });
+    html += '</details>';
 
     document.getElementById('configsContent').innerHTML = html;
-    document.getElementById('configTitle').innerHTML = `<span class="icon">🔑</span> Конфигурации клиента: <strong>${username}</strong>`;
+    document.getElementById('configTitle').innerHTML = `<span class="icon">🔑</span> Подключение: <strong>${escapeHtml(username)}</strong>`;
     let panel = document.getElementById('configsPanel');
     panel.classList.add('open');
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });

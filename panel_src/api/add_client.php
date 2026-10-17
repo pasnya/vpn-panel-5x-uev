@@ -4,7 +4,7 @@ require_admin(true);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
     $username = trim($_POST['username']);
-    $domain_id = $_POST['domain_id'] ?? '';
+    $domain_id = $_POST['domain_id'] ?? 'auto';
 
     // Валидация логина
     $username = preg_replace('/[^a-zA-Z0-9_-]/', '', $username);
@@ -15,6 +15,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
     try {
         $db = new PDO('sqlite:/var/www/panel/db/panel.db');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        if ($domain_id === 'auto') {
+            $domain_id = $db->query("SELECT id FROM domains WHERE ssl_status = 'active' ORDER BY id LIMIT 1")->fetchColumn() ?: '';
+        } elseif ($domain_id !== '') {
+            $check = $db->prepare("SELECT id FROM domains WHERE id = ? AND ssl_status = 'active'");
+            $check->execute([$domain_id]);
+            if (!$check->fetchColumn()) {
+                http_response_code(400);
+                exit('Домен ещё не готов');
+            }
+        }
 
         // Генерация UUID и пароля
         $uuid = cat_uuid();
@@ -33,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
         require_once 'rebuild_configs.php';
         rebuild_configs();
 
-        header("Location: ../index.php");
+        header("Location: ../index.php?created=" . $user_id);
         exit;
     } catch (Exception $e) {
         die("Ошибка при создании клиента: " . $e->getMessage());

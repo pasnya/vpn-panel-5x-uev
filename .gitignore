@@ -5,6 +5,8 @@
 !install.sh
 !cleanup.sh
 !README.md
+!docs/
+!docs/**
 !panel_src/
 !panel_src/**
 !.gitignore
