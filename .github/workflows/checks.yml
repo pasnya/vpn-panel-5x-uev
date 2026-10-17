@@ -13,3 +13,21 @@ jobs:
         run: find panel_src -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Check JavaScript syntax
         run: node --check panel_src/assets/js/main.js && node --check proxy_panel/server.js
+  relay-install-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install relay on a fresh runner
+        run: |
+          sudo bash proxy_panel/install.sh > /tmp/relay-install.log 2>&1 || {
+            tail -n 80 /tmp/relay-install.log
+            exit 1
+          }
+          sudo systemctl is-active --quiet openvpn@server.service
+          sudo systemctl is-active --quiet vpn-relay-panel.service
+      - name: Check relay API
+        run: |
+          token=$(sudo jq -r .apiToken /opt/vpn-relay/settings.json)
+          pin=$(sudo openssl x509 -in /opt/vpn-relay/tls.crt -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl base64 -A)
+          curl --silent --fail --insecure --pinnedpubkey "sha256//$pin" --header "Authorization: Bearer $token" https://127.0.0.1:8443/api/status | jq -e '.openvpn == true and .paired == false'

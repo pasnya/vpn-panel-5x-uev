@@ -156,6 +156,7 @@ SYSTEMD
 iptables -t nat -C PREROUTING -i tun0 -p tcp -j REDIRECT --to-ports 12345 2>/dev/null || iptables -t nat -I PREROUTING 1 -i tun0 -p tcp -j REDIRECT --to-ports 12345
 iptables -t nat -C PREROUTING -i tun0 -p udp --dport 53 -j REDIRECT --to-ports 12346 2>/dev/null || iptables -t nat -I PREROUTING 1 -i tun0 -p udp --dport 53 -j REDIRECT --to-ports 12346
 iptables -C FORWARD -i tun0 -j REJECT 2>/dev/null || iptables -I FORWARD 1 -i tun0 -j REJECT
+iptables -C INPUT -i tun0 -j DROP 2>/dev/null || iptables -I INPUT 1 -i tun0 -j DROP
 iptables -C INPUT -i tun0 -p tcp --dport 12345 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -i tun0 -p tcp --dport 12345 -j ACCEPT
 iptables -C INPUT -i tun0 -p udp --dport 12346 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -i tun0 -p udp --dport 12346 -j ACCEPT
 iptables -C INPUT ! -i tun0 -p tcp --dport 12345 -j DROP 2>/dev/null || iptables -I INPUT 1 ! -i tun0 -p tcp --dport 12345 -j DROP
