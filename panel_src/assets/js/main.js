@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initSearchFilter();
+    initDomainAutofill();
     fetchWarpStatus();
     refreshRelayStatus();
     if (window.justCreatedClientId) {
@@ -541,4 +542,65 @@ function deleteWarp() {
             }
         })
         .catch(e => alert('Сетевая ошибка: ' + e));
+}
+
+function initDomainAutofill() {
+    const domainInput = document.getElementById('inputDomainName');
+    const naiveInput = document.getElementById('inputNaiveSub');
+    if (!domainInput || !naiveInput) return;
+    domainInput.addEventListener('input', () => {
+        const val = domainInput.value.trim().toLowerCase();
+        if (val && !naiveInput.dataset.touched) {
+            naiveInput.value = 'n.' + val;
+        }
+    });
+    naiveInput.addEventListener('input', () => {
+        naiveInput.dataset.touched = '1';
+    });
+}
+
+async function checkDomainDns() {
+    const domain = (document.getElementById('inputDomainName')?.value || '').trim();
+    const naiveSub = (document.getElementById('inputNaiveSub')?.value || '').trim();
+    const box = document.getElementById('domainDnsCheckResult');
+    if (!box) return;
+    box.style.display = 'block';
+    box.className = 'alert alert-info';
+    box.textContent = 'Проверяю DNS-записи…';
+    try {
+        const res = await fetch(`api/add_domain.php?check_dns=1&domain=${encodeURIComponent(domain)}&naive_sub=${encodeURIComponent(naiveSub)}`);
+        const data = await res.json();
+        box.className = data.ok ? 'alert alert-info' : 'alert alert-warn';
+        box.textContent = data.message || 'Не удалось проверить DNS';
+    } catch (e) {
+        box.className = 'alert alert-warn';
+        box.textContent = 'Ошибка при проверке DNS: ' + e.message;
+    }
+}
+
+async function runHealthCheck() {
+    const btn = document.getElementById('btnHealthCheck');
+    const box = document.getElementById('healthResult');
+    if (!btn || !box) return;
+    btn.disabled = true;
+    btn.textContent = 'Проверяю…';
+    box.style.display = 'block';
+    box.className = 'alert alert-info';
+    box.textContent = 'Запуск диагностики сервера…';
+    try {
+        const res = await fetch('api/health.php', { cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Ошибка диагностики');
+        box.className = data.healthy ? 'alert alert-info' : 'alert alert-warn';
+        const items = (data.checks || []).map(c =>
+            `<div style="margin:4px 0">${c.ok ? '✅' : '❌'} <strong>${escapeHtml(c.label)}:</strong> ${escapeHtml(c.detail)}</div>`
+        ).join('');
+        box.innerHTML = items;
+    } catch (e) {
+        box.className = 'alert alert-warn';
+        box.textContent = 'Не удалось выполнить проверку: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🩺 Проверить здоровье сервера';
+    }
 }

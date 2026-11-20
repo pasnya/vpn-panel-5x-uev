@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Подготовка веб-установщика. Системные компоненты ставятся только из браузера.
+# Подготовка веб-установщика (или автоматическая установка при флаге --auto).
 set -euo pipefail
 
 PANEL_REF=${PANEL_REF:-v0.8.0}
 INSTALLER_DIR=/opt/vpn-panel-installer
 INSTALLER_PORT=8444
 BASE_URL="https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/${PANEL_REF}"
+AUTO_INSTALL=${AUTO_INSTALL:-0}
+
+for arg in "$@"; do
+    case "$arg" in
+        --auto) AUTO_INSTALL=1 ;;
+    esac
+done
 
 [[ $EUID -eq 0 ]] || { echo 'Запустите команду от root (sudo).' >&2; exit 1; }
 [[ ! -e /var/www/panel/db/panel.db ]] || { echo 'Панель уже установлена. Веб-установщик предназначен для нового сервера.' >&2; exit 1; }
@@ -34,6 +41,18 @@ bash -n "$tmp_script"
 python3 -m py_compile "$tmp_web"
 install -m 700 "$tmp_script" "$INSTALLER_DIR/full_install.sh"
 install -m 700 "$tmp_web" "$INSTALLER_DIR/web_installer.py"
+
+if [[ "$AUTO_INSTALL" == "1" ]]; then
+    echo "Запуск автоматической установки в консоли..."
+    exec /usr/bin/bash "$INSTALLER_DIR/full_install.sh"
+fi
+
+if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
+    if ! ufw status | grep -qE "${INSTALLER_PORT}/tcp\s+ALLOW"; then
+        ufw allow "${INSTALLER_PORT}/tcp" comment "vpn-panel-installer" >/dev/null 2>&1 || true
+        touch "$INSTALLER_DIR/ufw_opened"
+    fi
+fi
 
 if [[ ! -s "$INSTALLER_DIR/tls.crt" || ! -s "$INSTALLER_DIR/tls.key" ]]; then
     openssl req -x509 -newkey rsa:3072 -sha256 -nodes -days 30 \

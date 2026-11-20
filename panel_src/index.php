@@ -182,6 +182,18 @@ foreach ($services as $srv) {
     </div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['domain_dns_error'])): ?>
+    <div class="alert alert-warn" style="margin-top:15px;margin-bottom:0">
+        <strong>DNS ещё не настроен!</strong> Для <code><?= htmlspecialchars((string)$_GET['domain_dns_error']) ?></code> не найдена A-запись на IP <code><?= htmlspecialchars($ip_server) ?></code>. Создайте A-запись у регистратора или отметьте «Добавить без проверки DNS».
+    </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['domain_pending'])): ?>
+    <div class="alert alert-info" style="margin-top:15px;margin-bottom:0">
+        <strong>Домен поставлен в очередь.</strong> Выпуск SSL-сертификата займёт до 1–2 минут, страница обновится автоматически.
+    </div>
+    <?php endif; ?>
+
     <!-- Topbar -->
     <div class="topbar" id="mainTopbar">
         <div class="topbar-left">
@@ -231,8 +243,11 @@ foreach ($services as $srv) {
 
     <!-- Services -->
     <div class="card" id="servicesCard">
-        <div class="section-title">
-            <span class="icon">⚙️</span> Статус системных служб
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+            <div class="section-title" style="margin:0">
+                <span class="icon">⚙️</span> Статус системных служб
+            </div>
+            <button type="button" class="btn btn-sm btn-outline" id="btnHealthCheck" onclick="runHealthCheck()">🩺 Проверить здоровье сервера</button>
         </div>
         <div class="svc-grid" id="servicesGrid">
             <?php foreach ($statuses as $srv => $s): ?>
@@ -245,6 +260,7 @@ foreach ($services as $srv) {
             </div>
             <?php endforeach; ?>
         </div>
+        <div id="healthResult" style="margin-top:14px; display:none;"></div>
     </div>
 
     <!-- Users + Add Client -->
@@ -405,6 +421,13 @@ foreach ($services as $srv) {
                         <option value="landing">Простой лендинг</option>
                     </select>
                 </div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                    <button type="button" class="btn btn-sm btn-outline" id="btnCheckDomainDns" onclick="checkDomainDns()">Проверить DNS</button>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); margin:0; cursor:pointer;">
+                        <input type="checkbox" name="force" value="1" style="width:auto"> Добавить без проверки DNS
+                    </label>
+                </div>
+                <div id="domainDnsCheckResult" style="display:none; font-size:13px; margin-bottom:12px;"></div>
                 <button type="submit" class="btn" id="btnSubmitAddDomain" style="width:100%; justify-content:center;">Поставить выпуск SSL в очередь</button>
             </form>
         </div>

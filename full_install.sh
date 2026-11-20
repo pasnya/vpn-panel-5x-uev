@@ -18,6 +18,7 @@ log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warn()    { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+log_step()    { echo -e "${BLUE}[STEP $1]${NC} $2"; }
 
 if [[ $EUID -ne 0 ]]; then
     log_error "Этот скрипт должен быть запущен от имени root (sudo)."
@@ -39,7 +40,21 @@ ADMIN_SECRET=$(openssl rand -hex 12)
 CLIENT_UUID=$(cat /proc/sys/kernel/random/uuid)
 XHTTP_PATH=$(openssl rand -hex 8)
 
+# ── Авто-Swap для серверов с малым объёмом RAM ──────────────────────────────
+TOTAL_MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 2048)
+TOTAL_SWAP_MB=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)
+if [[ "$TOTAL_MEM_MB" -lt 1500 && "$TOTAL_SWAP_MB" -lt 512 && ! -f /swapfile ]]; then
+    log_info "Обнаружено мало RAM (${TOTAL_MEM_MB} МБ). Создание swap-файла 1 ГБ для стабильной работы..."
+    if fallocate -l 1G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=1024 status=none; then
+        chmod 600 /swapfile
+        mkswap /swapfile >/dev/null
+        swapon /swapfile || true
+        grep -q "^/swapfile " /etc/fstab || echo "/swapfile none swap sw 0 0" >> /etc/fstab
+    fi
+fi
+
 # ── Обновление пакетов и установка зависимостей ─────────────────────────────
+log_step "1/7" "Обновление системы и установка базовых пакетов..."
 log_info "Начало установки. Обновление пакетов и установка зависимостей..."
 apt-get update
 apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
@@ -91,6 +106,7 @@ cat > /var/www/panel/db/paths.json << EOF
 EOF
 
 # ── Установка Caddy с NaiveProxy ────────────────────────────────────────────
+log_step "2/7" "Установка Caddy (NaiveProxy)..."
 log_info "Установка Caddy с поддержкой NaiveProxy..."
 log_info "Сборка Caddy через xcaddy..."
 apt-get install -y golang
@@ -108,6 +124,7 @@ else
 fi
 
 # ── Установка Xray Core ─────────────────────────────────────────────────────
+log_step "3/7" "Установка VPN-ядер (Xray, Mieru, Hysteria 2)..."
 log_info "Установка Xray Core..."
 export XRAY_INSTALL_NONINTERACTIVE=1
 bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install
@@ -130,6 +147,7 @@ bash -c "$(curl -fsSL https://get.hy2.sh)"
 usermod -aG www-data hysteria || true
 
 # ── Cloudflare WARP ─────────────────────────────────────────────────────────
+log_step "4/7" "Настройка Cloudflare WARP..."
 log_info "Настройка Cloudflare WARP..."
 systemctl enable warp-svc 2>/dev/null || true
 systemctl start warp-svc 2>/dev/null || true
@@ -232,6 +250,7 @@ EOF
 fi
 
 # ── Nginx: dummy SSL cert ───────────────────────────────────────────────────
+log_step "5/7" "Настройка Nginx и веб-служб..."
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout /etc/nginx/conf.d/dummy.key \
     -out /etc/nginx/conf.d/dummy.crt \
@@ -448,6 +467,7 @@ EOF
 chmod +x /etc/letsencrypt/renewal-hooks/deploy/01-permissions.sh
 
 # ── Копирование панели ─────────────────────────────────────────────────────
+log_step "6/7" "Установка веб-панели и инициализация базы данных..."
 log_info "Копирование исходных файлов веб-интерфейса панели..."
 if [ -d "panel_src" ]; then
     cp -pRL panel_src/. /var/www/panel/
@@ -540,6 +560,24 @@ else
     log_info "База данных уже существует, пропуск инициализации."
 fi
 
+# Опциональное добавление домена, переданного при установке
+INSTALL_DOMAIN=${INSTALL_DOMAIN:-}
+INSTALL_NAIVE_SUB=${INSTALL_NAIVE_SUB:-}
+INSTALL_DECOY=${INSTALL_DECOY:-blog}
+if [[ -n "$INSTALL_DOMAIN" ]]; then
+    [[ -n "$INSTALL_NAIVE_SUB" ]] || INSTALL_NAIVE_SUB="n.${INSTALL_DOMAIN}"
+    if [[ "$INSTALL_DOMAIN" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$ ]] && \
+       [[ "$INSTALL_NAIVE_SUB" =~ ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$ ]] && \
+       [[ "$INSTALL_NAIVE_SUB" == *".${INSTALL_DOMAIN}" ]]; then
+        [[ "$INSTALL_DECOY" =~ ^(blog|portfolio|landing)$ ]] || INSTALL_DECOY="blog"
+        sqlite3 /var/www/panel/db/panel.db \
+            "INSERT INTO domains (domain_name, naive_sub, decoy_type, ssl_status, admin_path) VALUES ('${INSTALL_DOMAIN}', '${INSTALL_NAIVE_SUB}', '${INSTALL_DECOY}', 'requesting', '${ADMIN_SECRET}') ON CONFLICT(domain_name) DO UPDATE SET naive_sub=excluded.naive_sub, decoy_type=excluded.decoy_type, ssl_status='requesting';"
+        log_info "Домен ${INSTALL_DOMAIN} (поддомен ${INSTALL_NAIVE_SUB}) поставлен в очередь на выпуск SSL."
+    else
+        log_warn "Переданный домен (${INSTALL_DOMAIN}) имеет некорректный формат и пропущен."
+    fi
+fi
+
 # ── Права на файлы ─────────────────────────────────────────────────────────
 log_info "Настройка прав доступа..."
 chown -R root:www-data /etc/caddy /etc/xray /etc/mita /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d /etc/hysteria
@@ -555,6 +593,7 @@ echo "<h1>Welcome to default decoy page</h1>" > /var/www/html/index.html
 chown www-data:www-data /var/www/html/index.html
 
 # ── Запуск служб ───────────────────────────────────────────────────────────
+log_step "7/7" "Настройка сети, файрвола и запуск всех служб..."
 log_info "Запуск системных служб..."
 systemctl daemon-reload
 systemctl enable nginx "$PHP_FPM_SERVICE" xray mita hysteria-server warp-svc caddy redsocks cron
@@ -584,12 +623,38 @@ iptables-legacy -t nat -D PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to
 iptables-legacy -t nat -A PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443
 netfilter-persistent save 2>/dev/null || true
 
+# ── UFW: автоматическое открытие рабочих портов ────────────────────────────
+if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
+    log_info "Настройка правил UFW (22, 80, 443, 20000:50000/udp)..."
+    ufw allow 22/tcp comment "SSH" >/dev/null 2>&1 || true
+    ufw allow 80/tcp comment "VPN Panel HTTP/ACME" >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment "VPN Panel HTTPS/Reality" >/dev/null 2>&1 || true
+    ufw allow 443/udp comment "VPN Panel Hysteria2" >/dev/null 2>&1 || true
+    ufw allow 20000:50000/udp comment "VPN Panel Hysteria2 Hop" >/dev/null 2>&1 || true
+fi
+
 # ── Итог ────────────────────────────────────────────────────────────────────
 IPV4_SERVER=$(curl -4 -s --max-time 10 ifconfig.me || echo "IP_СЕРВЕРА")
 if [[ "$IPV4_SERVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     jq --arg ip "$IPV4_SERVER" '.public_ip = $ip' /var/www/panel/db/paths.json > /var/www/panel/db/paths.json.tmp
     mv /var/www/panel/db/paths.json.tmp /var/www/panel/db/paths.json
     chown www-data:www-data /var/www/panel/db/paths.json
+fi
+
+INSTALLER_DIR_OUT=${VPN_INSTALLER_DIR:-/opt/vpn-panel-installer}
+if [[ -d "$INSTALLER_DIR_OUT" ]]; then
+    jq -n \
+        --arg ip "$IPV4_SERVER" \
+        --arg admin_path "$ADMIN_SECRET" \
+        --arg admin_port "8080" \
+        --arg login "admin" \
+        --arg password "${ADMIN_PASSWORD:-}" \
+        --arg public_key "${PUBLIC_KEY:-}" \
+        --arg domain "${INSTALL_DOMAIN:-}" \
+        '{ip: $ip, admin_path: $admin_path, admin_port: $admin_port, login: $login, password: $password, public_key: $public_key, domain: $domain}' \
+        > "${INSTALLER_DIR_OUT}/summary.json.tmp"
+    chmod 600 "${INSTALLER_DIR_OUT}/summary.json.tmp"
+    mv "${INSTALLER_DIR_OUT}/summary.json.tmp" "${INSTALLER_DIR_OUT}/summary.json"
 fi
 
 log_success "Установка завершена успешно!"
