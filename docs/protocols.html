@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Протоколы VPN на одном 443 порту: Reality, xHTTP, Hysteria 2, NaiveProxy, Mieru</title>
+  <meta name="description" content="Сравнение протоколов в VPN panel 5X-UEV: какой выбрать без домена, для мобильного интернета и для обхода жёстких блокировок на порту 443.">
+  <link rel="canonical" href="https://pasnya.github.io/vpn-panel-5x-uev/protocols.html">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🚀 VPN panel 5X-UEV</div>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="cascade-relay.html">Сервер-прокладка</a>
+      <a href="protocols.html">Протоколы</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>5 протоколов на одном порту 443 + Cloudflare WARP</h1>
+    <p>Панель использует Nginx Stream SNI-маршрутизацию, поэтому все протоколы мирно уживаются на стандартном HTTPS-порту <code>443</code>.</p>
+  </section>
+
+  <table>
+    <thead>
+      <tr><th>Протокол</th><th>Нужен ли домен?</th><th>Транспорт</th><th>Когда выбирать</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>VLESS + Reality</strong></td><td>❌ Нет (по IP)</td><td>TCP</td><td>Быстрый старт сразу после установки.</td></tr>
+      <tr><td><strong>VLESS + xHTTP</strong></td><td>✅ Да</td><td>HTTPS</td><td>Запасной канал через ваш домен и сайт-заглушку.</td></tr>
+      <tr><td><strong>Hysteria 2</strong></td><td>✅ Да</td><td>UDP / QUIC</td><td>Максимальная скорость на плохих/мобильных сетях (с port hopping).</td></tr>
+      <tr><td><strong>NaiveProxy (Caddy)</strong></td><td>✅ Поддомен</td><td>HTTPS</td><td>Идеальная маскировка под браузер Chrome через Caddy forwardproxy.</td></tr>
+      <tr><td><strong>Mita (Mieru)</strong></td><td>✅ Да</td><td>TCP</td><td>Высокоустойчивый резервный TCP-протокол.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card">
+    <h3>🌀 Встроенный Cloudflare WARP</h3>
+    <p>В панели можно в 1 клик включить WARP в режиме <strong>Smart</strong> (через WARP идут OpenAI, Netflix, ipify) или <strong>Global</strong> (весь исходящий трафик сервера через WARP).</p>
+  </div>
+
+  <footer>
+    <a href="index.html">← На главную</a> · <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+  </footer>
+</div>
+</body>
+</html>

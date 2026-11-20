@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pasnya.github.io/vpn-panel-5x-uev/sitemap.xml

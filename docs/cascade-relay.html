@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Сервер-прокладка (каскадный VPN): OpenVPN поверх VLESS Reality — 5X-UEV</title>
+  <meta name="description" content="Как поднять каскадный VPN на двух VPS: клиент подключается по OpenVPN к входному серверу-прокладке, а трафик уходит на основной сервер по VLESS Reality или xHTTP.">
+  <link rel="canonical" href="https://pasnya.github.io/vpn-panel-5x-uev/cascade-relay.html">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🚀 VPN panel 5X-UEV</div>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="cascade-relay.html">Сервер-прокладка</a>
+      <a href="protocols.html">Протоколы</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Сервер-прокладка (каскадный VPN): OpenVPN → Reality / xHTTP</h1>
+    <p>Когда прямой доступ к зарубежному VPS нестабилен или клиенту нужен привычный OpenVPN-файл (<code>.ovpn</code>), на помощь приходит отдельный входной сервер-прокладка.</p>
+  </section>
+
+  <div class="card">
+    <h3>Как устроена схема</h3>
+    <pre>Устройство (OpenVPN .ovpn)  ──▶  Входной VPS (Прокладка)  ──[Reality / xHTTP]──▶  Основной зарубежный VPS  ──▶  Интернет</pre>
+    <p>Прокладка сама следит за доступностью каналов <strong>VLESS Reality</strong> (работает по IP) и <strong>VLESS xHTTP</strong> (требует домен). Если основной канал падает, она автоматически переключается на резервный, а при полном отказе — блокирует прямой выход в интернет, чтобы не светить IP прокладки.</p>
+  </div>
+
+  <h2>Установка за 2 шага</h2>
+  <div class="card">
+    <p><strong>Шаг 1.</strong> На втором чистом Ubuntu VPS выполните:</p>
+    <pre>bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.0/proxy_panel/install.sh)"</pre>
+    <p>Скрипт сам откроет порты <code>51820/udp</code> и <code>8443/tcp</code> в UFW и выведет <strong>строку подключения</strong>.</p>
+    <p><strong>Шаг 2.</strong> Вставьте эту строку в раздел <strong>«Сервер-прокладка»</strong> основной панели. После связки у всех клиентов появится кнопка <strong>«Скачать OpenVPN для прокладки»</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h3>Важное ограничение</h3>
+    <p>Прозрачная маршрутизация на прокладке передаёт TCP и DNS. Остальной UDP-трафик намеренно блокируется, чтобы не обходить основной туннель. Для игр и видеозвонков по UDP используйте прямые профили (Reality или Hysteria 2).</p>
+  </div>
+
+  <footer>
+    <a href="index.html">← На главную</a> · <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+  </footer>
+</div>
+</body>
+</html>

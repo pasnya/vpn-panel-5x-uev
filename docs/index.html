@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VPN panel 5X-UEV — свой VPN на VPS без знаний Linux за 3 минуты</title>
+  <meta name="description" content="Простая веб-панель для личного VPN на Ubuntu: установка через браузер без домена, VLESS Reality, Hysteria 2, NaiveProxy, Mieru, Cloudflare WARP и сервер-прокладка OpenVPN.">
+  <link rel="canonical" href="https://pasnya.github.io/vpn-panel-5x-uev/">
+  <meta property="og:title" content="VPN panel 5X-UEV — свой VPN на VPS для новичка">
+  <meta property="og:description" content="Веб-установщик с прогресс-баром, работа без домена по IP (VLESS Reality), 5 протоколов на порту 443 и готовый каскадный сервер-прокладка.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://pasnya.github.io/vpn-panel-5x-uev/">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VPN panel 5X-UEV",
+    "operatingSystem": "Ubuntu 20.04, 22.04, 24.04",
+    "applicationCategory": "NetworkingApplication",
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+    "url": "https://github.com/pasnya/vpn-panel-5x-uev"
+  }
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🚀 VPN panel 5X-UEV</div>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="cascade-relay.html">Сервер-прокладка</a>
+      <a href="protocols.html">Протоколы</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Личный VPN на своём VPS за 3 минуты — без домена и знаний Linux</h1>
+    <p><strong>VPN panel 5X-UEV</strong> автоматизирует всё: от веб-установки с прогресс-баром и настройки файрвола до создания профилей по одному имени с готовым QR-кодом.</p>
+    <a class="btn" href="#install">Установить на Ubuntu</a>
+    <a class="btn btn-sec" href="cascade-relay.html">Настроить сервер-прокладку</a>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <h3>🌐 Установка через браузер</h3>
+      <p>Не нужно разбираться в конфигах. Веб-инсталлятор сам откроет нужные порты в UFW, создаст swap при нехватке памяти и выдаст готовые скрипты входа (<code>.bat</code> / <code>.sh</code>).</p>
+    </div>
+    <div class="card">
+      <h3>🔓 Работает без домена</h3>
+      <p>Сразу после установки доступен <strong>VLESS + Reality</strong> по IP-адресу сервера. Домен можно подключить позже в пару кликов с автоматическим выпуском SSL.</p>
+    </div>
+    <div class="card">
+      <h3>🔗 Каскадный VPN (Прокладка)</h3>
+      <p>Свяжите второй входной VPS одной строкой: клиент подключается по стандартному OpenVPN, а прокладка гонит трафик через Reality или xHTTP.</p>
+    </div>
+  </div>
+
+  <h2 id="install">Установка на чистый Ubuntu 20.04 / 22.04 / 24.04</h2>
+  <p>Выполните на сервере от <code>root</code>:</p>
+  <pre>bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.0/install.sh)"</pre>
+  <p>Откройте полученную ссылку <code>https://IP_СЕРВЕРА:8444/?token=…</code> в браузере и нажмите <strong>«Начать установку»</strong>. Для установки без браузера добавьте флаг <code>--auto</code>.</p>
+
+  <h2>Сравнение с аналогами</h2>
+  <table>
+    <thead>
+      <tr><th>Функция</th><th>5X-UEV</th><th>3x-ui</th><th>Ручная настройка</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Веб-установщик и скрипты входа <code>.bat</code> / <code>.sh</code></td><td>✅ Да</td><td>❌ Нет</td><td>❌ Нет</td></tr>
+      <tr><td>5 протоколов на 443 порту (Reality, xHTTP, Hysteria 2, Naive, Mieru)</td><td>✅ Из коробки</td><td>Только Xray</td><td>⚙️ Сложно</td></tr>
+      <tr><td>Готовый OpenVPN сервер-прокладка (каскадный VPN)</td><td>✅ В 1 строку</td><td>❌ Нет</td><td>⚙️ Очень сложно</td></tr>
+      <tr><td>Проверка DNS перед SSL и диагностика служб</td><td>✅ Встроена</td><td>❌ Нет</td><td>❌ Нет</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    Открытый исходный код под свободной лицензией · <a href="https://github.com/pasnya/vpn-panel-5x-uev">Репозиторий на GitHub</a> · <a href="https://github.com/pasnya/anarise-vpn">Клиент Anarise VPN</a>
+  </footer>
+</div>
+</body>
+</html>

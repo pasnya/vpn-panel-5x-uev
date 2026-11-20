@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAQ и решение проблем — VPN panel 5X-UEV</title>
+  <meta name="description" content="Ответы на частые вопросы новичков: установка без домена, вход в панель через SSH-туннель, проверка DNS, диагностика портов 80 и 443.">
+  <link rel="canonical" href="https://pasnya.github.io/vpn-panel-5x-uev/faq.html">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Нужен ли домен для запуска VPN?",
+        "acceptedAnswer": {"@type": "Answer", "text": "Нет. Протокол VLESS + Reality работает сразу по IP-адресу сервера без покупки домена."}
+      },
+      {
+        "@type": "Question",
+        "name": "Как зайти в панель на Windows без настройки SSH вручную?",
+        "acceptedAnswer": {"@type": "Answer", "text": "После завершения установки в веб-инсталляторе нажмите кнопку «Скрипт входа для Windows (.bat)» — он сам поднимет SSH-туннель и откроет панель в браузере."}
+      },
+      {
+        "@type": "Question",
+        "name": "Как проверить, почему не работает подключение?",
+        "acceptedAnswer": {"@type": "Answer", "text": "В панели управления нажмите кнопку «Проверить здоровье сервера» — она проверит статус 7 служб, открытые порты 80 и 443, диск и оперативную память."}
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🚀 VPN panel 5X-UEV</div>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="cascade-relay.html">Сервер-прокладка</a>
+      <a href="protocols.html">Протоколы</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Частые вопросы (FAQ)</h1>
+  </section>
+
+  <div class="card">
+    <h3>Нужен ли домен для запуска VPN?</h3>
+    <p>Нет. По умолчанию сразу работает <strong>VLESS + Reality</strong> по IP сервера. Домен нужен только если вы хотите включить Hysteria 2, NaiveProxy, xHTTP и Mieru.</p>
+  </div>
+
+  <div class="card">
+    <h3>Как открыть панель управления новичку?</h3>
+    <p>По завершении установки веб-инсталлятор даёт готовые файлы <code>open-panel-windows.bat</code> и <code>open-panel-mac-linux.sh</code>. Достаточно запустить файл двойным кликом — он сам откроет SSH-туннель и страницу панели.</p>
+  </div>
+
+  <div class="card">
+    <h3>Не выпускается SSL-сертификат для домена</h3>
+    <p>Перед добавлением домена нажмите в панели кнопку <strong>«Проверить DNS»</strong>. Убедитесь, что A-записи основного домена и поддомена NaiveProxy указывают на внешний IP вашего сервера, а порт <code>80/tcp</code> открыт у облачного провайдера.</p>
+  </div>
+
+  <div class="card">
+    <h3>Как проверить, всё ли работает на сервере?</h3>
+    <p>Нажмите кнопку <strong>«🩺 Проверить здоровье сервера»</strong> в разделе системных служб — панель покажет состояние Xray, Caddy, Nginx, Hysteria 2, Mita, WARP, портов 80/443, диска и памяти.</p>
+  </div>
+
+  <footer>
+    <a href="index.html">← На главную</a> · <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+  </footer>
+</div>
+</body>
+</html>
