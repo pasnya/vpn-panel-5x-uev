@@ -21,25 +21,34 @@ if ($action === 'update' && $core === 'all') {
     exit(json_encode(['error' => 'Update one core at a time']));
 }
 
-function curl_json($url) {
-    $ch = curl_init($url);
+// Последний тег релиза через редирект github.com/.../releases/latest: без GitHub API,
+// у которого лимит 60 запросов в час на IP (на общих IP облаков он часто исчерпан).
+function github_latest_tag($repo) {
+    $ch = curl_init("https://github.com/{$repo}/releases/latest");
     curl_setopt_array($ch, [
         CURLOPT_USERAGENT => 'VPN-Panel/1.0',
+        CURLOPT_NOBODY => true,
         CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
         CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT => 30,
         CURLOPT_SSL_VERIFYPEER => true,
     ]);
-    $resp = curl_exec($ch);
+    $ok = curl_exec($ch) !== false && curl_getinfo($ch, CURLINFO_RESPONSE_CODE) < 400;
+    $url = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
     curl_close($ch);
-    return $resp ? json_decode($resp, true) : null;
+    if (!$ok || !preg_match('#/releases/tag/([^/?\#]+)$#', $url, $m)) return null;
+    return rawurldecode($m[1]);
 }
 
 function get_latest_version($repo) {
     for ($i = 0; $i < 3; $i++) {
-        $data = curl_json("https://api.github.com/repos/{$repo}/releases/latest");
-        if (isset($data['tag_name'])) {
-            return $data['tag_name'];
+        $tag = github_latest_tag($repo);
+        if ($tag !== null && $tag !== '') {
+            return $tag;
         }
         sleep(1);
     }
