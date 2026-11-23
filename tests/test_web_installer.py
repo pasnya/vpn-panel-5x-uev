@@ -9,11 +9,14 @@ import shutil
 import socket
 import ssl
 import subprocess
+import sys
 import tempfile
 import time
 
 
 SOURCE = pathlib.Path(__file__).resolve().parents[1] / "web_installer.py"
+# Запуск установки вызывает /usr/bin/bash и следит за процессом через /proc — это есть только на Linux.
+CAN_RUN_INSTALL = sys.platform.startswith("linux") and pathlib.Path("/usr/bin/bash").exists()
 
 
 def request(port, route, method="GET", body=None, headers=None):
@@ -37,7 +40,7 @@ with tempfile.TemporaryDirectory() as folder:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     env = dict(os.environ, VPN_INSTALLER_DIR=str(root), VPN_INSTALLER_PORT=str(port))
-    server = subprocess.Popen(["python3", str(SOURCE)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    server = subprocess.Popen([sys.executable, str(SOURCE)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
         for _ in range(40):
             try:
@@ -60,6 +63,9 @@ with tempfile.TemporaryDirectory() as folder:
         assert request(port, "/api/status?token=wrong")[0] == 403
         status, data = request(port, "/api/status?token=test-token")
         assert status == 200 and json.loads(data)["state"] == "ready"
+        if not CAN_RUN_INSTALL:
+            print("not Linux: skipping the install start check (needs /usr/bin/bash and /proc)")
+            raise SystemExit(0)
         status, _ = request(port, "/api/start?token=test-token", "POST", "{}", {"Content-Type": "application/json"})
         assert status == 202
         assert request(port, "/api/start?token=test-token", "POST", "{}", {"Content-Type": "application/json"})[0] == 409

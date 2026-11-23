@@ -108,6 +108,18 @@ a:hover {
     align-items: center;
     gap: 12px;
 }
+/* На телефоне счётчики и «Выйти» переносятся под логотип, а не вылезают за экран. */
+@media (max-width: 640px) {
+    .topbar {
+        flex-wrap: wrap;
+        gap: 14px;
+        padding: 16px;
+    }
+    .topbar-right {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
 
 /* Sections & Cards */
 .section-title {
@@ -230,6 +242,11 @@ a:hover {
     display: grid;
     grid-template-columns: 1.6fr 1fr;
     gap: 24px;
+}
+/* Элементы сетки по умолчанию не сжимаются уже содержимого: широкая таблица раздувала
+   карточку и всю страницу на телефоне. min-width: 0 оставляет прокрутку внутри .table-wrapper. */
+.cols > * {
+    min-width: 0;
 }
 @media (max-width: 900px) {
     .cols {

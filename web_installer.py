@@ -105,6 +105,7 @@ def finish(process, output):
 PAGE = r"""<!doctype html>
 <html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Установка VPN panel 5X-UEV</title>
+<link rel="icon" href="data:,">
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0f1724;color:#eef5ff;font:16px/1.55 system-ui,-apple-system,sans-serif}
 main{max-width:780px;margin:4vh auto;padding:20px}section{background:#1b283b;border:1px solid #34445d;border-radius:18px;padding:28px;box-shadow:0 20px 45px rgba(0,0,0,.35)}

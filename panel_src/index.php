@@ -57,6 +57,17 @@ if (!isset($_SESSION['logged_in'])) {
 </html>
 <?php exit; }
 
+/* ── Helpers ── */
+// Число со словом в правильной форме: 1 клиент, 2 клиента, 5 клиентов, 21 клиент, 11 клиентов.
+function ru_count(int $n, string $one, string $few, string $many): string {
+    $mod100 = $n % 100;
+    $mod10 = $n % 10;
+    if ($mod100 >= 11 && $mod100 <= 14) return "$n $many";
+    if ($mod10 === 1) return "$n $one";
+    if ($mod10 >= 2 && $mod10 <= 4) return "$n $few";
+    return "$n $many";
+}
+
 /* ── Data ── */
 $db = new PDO('sqlite:/var/www/panel/db/panel.db');
 
@@ -204,8 +215,8 @@ foreach ($services as $srv) {
             </div>
         </div>
         <div class="topbar-right">
-            <span class="tag tag-info" id="badgeClientsCount"><?= count($users) ?> клиентов</span>
-            <span class="tag tag-info" id="badgeDomainsCount"><?= count($domains) ?> доменов</span>
+            <span class="tag tag-info" id="badgeClientsCount"><?= ru_count(count($users), 'клиент', 'клиента', 'клиентов') ?></span>
+            <span class="tag tag-info" id="badgeDomainsCount"><?= ru_count(count($domains), 'домен', 'домена', 'доменов') ?></span>
             <a href="?logout=1" class="btn btn-outline btn-sm" id="btnDashboardLogout">Выйти</a>
         </div>
     </div>
