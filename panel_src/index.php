@@ -29,7 +29,7 @@ if (!isset($_SESSION['logged_in'])) {
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Вход — VPN Panel</title>
+    <title>Вход - VPN Panel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -105,7 +105,7 @@ $users = $db->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $public_key = trim(@file_get_contents('/etc/xray/public.key'));
-if (empty($public_key)) $public_key = '—';
+if (empty($public_key)) $public_key = '-';
 
 $hysteria_config = @file_get_contents('/etc/hysteria/config.yaml');
 $obfs_password = '';
@@ -170,7 +170,7 @@ foreach ($services as $srv) {
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>VPN Dashboard — Панель управления</title>
+    <title>VPN Dashboard - Панель управления</title>
     <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -344,7 +344,7 @@ foreach ($services as $srv) {
                     <label for="selectClientDomain">Привязать домен (для xhttp, Naive, Hysteria)</label>
                     <select id="selectClientDomain" name="domain_id">
                         <option value="auto">Автоматически</option>
-                        <option value="">— Без домена (только Reality по IP) —</option>
+                        <option value="">- Без домена (только Reality по IP) -</option>
                         <?php foreach ($active_domains as $d): ?>
                             <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['domain_name']) ?></option>
                         <?php endforeach; ?>
@@ -471,8 +471,8 @@ foreach ($services as $srv) {
                 <div class="fg">
                     <label for="selectWarpMode">Режим маршрутизации трафика</label>
                     <select id="selectWarpMode" onchange="setWarpMode(this.value)">
-                        <option value="smart">Умный (Smart) — только OpenAI/Netflix/ipify</option>
-                        <option value="all">Глобальный (Global) — весь трафик через WARP</option>
+                        <option value="smart">Умный (Smart) - только OpenAI/Netflix/ipify</option>
+                        <option value="all">Глобальный (Global) - весь трафик через WARP</option>
                     </select>
                 </div>
                 
@@ -495,19 +495,19 @@ foreach ($services as $srv) {
                 </div>
                 <div class="warp-meta-item" style="display:none; justify-content:space-between; align-items:center;">
                     <span style="color:var(--text-dim);">Device ID:</span>
-                    <code class="mono" id="warpDeviceId">—</code>
+                    <code class="mono" id="warpDeviceId">-</code>
                 </div>
                 <div class="warp-meta-item" style="display:none; justify-content:space-between; align-items:center;">
                     <span style="color:var(--text-dim);">Локальный IPv4:</span>
-                    <code class="mono" id="warpIPv4">—</code>
+                    <code class="mono" id="warpIPv4">-</code>
                 </div>
                 <div class="warp-meta-item" style="display:none; justify-content:space-between; align-items:center;">
                     <span style="color:var(--text-dim);">Локальный IPv6:</span>
-                    <code class="mono" id="warpIPv6">—</code>
+                    <code class="mono" id="warpIPv6">-</code>
                 </div>
                 <div class="warp-meta-item" style="display:none; justify-content:space-between; align-items:center;">
                     <span style="color:var(--text-dim);">Лицензия:</span>
-                    <code class="mono" id="warpLicense">—</code>
+                    <code class="mono" id="warpLicense">-</code>
                 </div>
             </div>
         </div>
@@ -537,7 +537,7 @@ foreach ($services as $srv) {
                         <div class="cores-name"><?= $c['name'] ?></div>
                         <div class="cores-desc"><?= $c['desc'] ?></div>
                     </div>
-                    <span class="cores-ver" id="ver-<?= $c['key'] ?>">—</span>
+                    <span class="cores-ver" id="ver-<?= $c['key'] ?>">-</span>
                     <button class="btn btn-sm btn-outline" id="btn-update-<?= $c['key'] ?>" disabled onclick="updateCore('<?= $c['key'] ?>')">Сначала проверьте</button>
                 </div>
                 <?php endforeach; ?>

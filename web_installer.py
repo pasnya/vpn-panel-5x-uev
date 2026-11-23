@@ -129,7 +129,7 @@ details{margin-top:16px}summary{cursor:pointer;color:#93c5fd;font-weight:600;use
 </style>
 <main><section>
 <h1>🚀 Установка VPN panel 5X-UEV</h1>
-<p>Файлы уже загружены на сервер. Можно начать сразу — VPN заработает по IP без домена (VLESS + Reality).</p>
+<p>Файлы уже загружены на сервер. Можно начать сразу - VPN заработает по IP без домена (VLESS + Reality).</p>
 
 <details id="domainOpts">
   <summary>🌐 У меня уже есть домен (необязательно)</summary>
@@ -164,10 +164,10 @@ details{margin-top:16px}summary{cursor:pointer;color:#93c5fd;font-weight:600;use
 <div id="resultBox" class="card" style="display:none">
   <h2 style="margin-top:0">✅ Всё готово! Сохраните данные для входа</h2>
   <div class="kv"><span>Логин:</span><code id="resLogin">admin</code></div>
-  <div class="kv"><span>Пароль:</span><div class="row" style="margin:0"><code id="resPass">—</code><button type="button" class="btn-sec" id="copyPassBtn">Копировать</button></div></div>
-  <div class="kv"><span>Команда SSH-туннеля:</span><div class="row" style="margin:0"><code id="resSsh">—</code><button type="button" class="btn-sec" id="copySshBtn">Копировать</button></div></div>
-  <div class="kv"><span>Адрес панели (через туннель):</span><div class="row" style="margin:0"><code id="resUrl">—</code><button type="button" class="btn-sec" id="copyUrlBtn">Копировать</button></div></div>
-  <div class="kv" id="resDomainRow" style="display:none"><span>Адрес по домену (после выпуска SSL):</span><code id="resDomainUrl">—</code></div>
+  <div class="kv"><span>Пароль:</span><div class="row" style="margin:0"><code id="resPass">-</code><button type="button" class="btn-sec" id="copyPassBtn">Копировать</button></div></div>
+  <div class="kv"><span>Команда SSH-туннеля:</span><div class="row" style="margin:0"><code id="resSsh">-</code><button type="button" class="btn-sec" id="copySshBtn">Копировать</button></div></div>
+  <div class="kv"><span>Адрес панели (через туннель):</span><div class="row" style="margin:0"><code id="resUrl">-</code><button type="button" class="btn-sec" id="copyUrlBtn">Копировать</button></div></div>
+  <div class="kv" id="resDomainRow" style="display:none"><span>Адрес по домену (после выпуска SSL):</span><code id="resDomainUrl">-</code></div>
   <div class="row" style="margin-top:16px">
     <button type="button" id="dlTxtBtn">📄 Скачать памятку (.txt)</button>
     <button type="button" class="btn-sec" id="dlBatBtn">🪟 Скрипт входа для Windows (.bat)</button>
@@ -235,7 +235,7 @@ function renderSummary(s){
   document.getElementById('copyUrlBtn').onclick=e=>copyText(panelUrl,e.target);
   document.getElementById('dlTxtBtn').onclick=()=>{
     const txt=[
-      '=== VPN panel 5X-UEV — Данные для входа ===',
+      '=== VPN panel 5X-UEV - Данные для входа ===',
       `IP сервера: ${s.ip}`,
       `Логин: ${s.login}`,
       `Пароль: ${s.password}`,

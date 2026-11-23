@@ -424,10 +424,10 @@ function fetchWarpStatus() {
                 registeredView.style.display = 'block';
                 
                 // Set metadata values
-                deviceIdEl.textContent = data.data.device_id || '—';
-                ipv4El.textContent = data.data.v4 || '—';
-                ipv6El.textContent = data.data.v6 || '—';
-                licenseEl.textContent = data.data.license_key || '—';
+                deviceIdEl.textContent = data.data.device_id || '-';
+                ipv4El.textContent = data.data.v4 || '-';
+                ipv6El.textContent = data.data.v6 || '-';
+                licenseEl.textContent = data.data.license_key || '-';
                 metaItems.forEach(el => el.style.display = 'flex');
 
                 // Set mode selection

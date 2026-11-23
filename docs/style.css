@@ -1,4 +1,4 @@
-/* VPN panel 5X-UEV — сайт документации. Тёмная тема по умолчанию, светлая — по системе или переключателю. */
+/* VPN panel 5X-UEV - сайт документации. Тёмная тема по умолчанию, светлая - по системе или переключателю. */
 :root {
   --bg: #070b14;
   --bg-2: #0b1120;
@@ -191,6 +191,7 @@ pre .copy-btn:hover { background: #223049; }
 /* ── Карточки и сетки ──────────────────────────────────── */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 20px 0; }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
 .card {
   position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 24px; margin: 16px 0; box-shadow: var(--shadow);
@@ -288,7 +289,7 @@ thead .col-us { color: var(--accent); }
 }
 @media (max-width: 640px) {
   .wrap { padding: 0 16px; }
-  .grid-3, .steps { grid-template-columns: 1fr; }
+  .grid-3, .grid-2, .steps { grid-template-columns: 1fr; }
   .hero-home { padding-block: 56px 16px; }
   .page-hero { padding-block: 40px 0; }
   h2 { margin-top: 48px; }

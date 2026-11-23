@@ -15,7 +15,7 @@ import time
 
 
 SOURCE = pathlib.Path(__file__).resolve().parents[1] / "web_installer.py"
-# Запуск установки вызывает /usr/bin/bash и следит за процессом через /proc — это есть только на Linux.
+# Запуск установки вызывает /usr/bin/bash и следит за процессом через /proc - это есть только на Linux.
 CAN_RUN_INSTALL = sys.platform.startswith("linux") and pathlib.Path("/usr/bin/bash").exists()
 
 
