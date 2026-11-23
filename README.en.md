@@ -74,6 +74,17 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/
 
 ### Relay Server (Optional Second VPS)
 
+**"But OpenVPN gets blocked!"** Yes: in Russia, OpenVPN to **foreign** servers usually doesn't work, the protocol is too recognizable. But OpenVPN to a server **inside Russia** works fine. So the relay goes on a Russian VPS: devices connect to it with a plain OpenVPN file, and the relay carries the traffic across the border to your main server over Reality or xHTTP.
+
+```
+Device (.ovpn) --OpenVPN, inside Russia--> Relay in Russia --Reality / xHTTP across the border--> Main server abroad --> Internet
+```
+
+* **Direct to the main server abroad**: VLESS Reality, xHTTP, Hysteria 2, NaiveProxy or Mieru, with any app that supports the chosen protocol. OpenVPN is never used for the main server.
+* **Through the relay**: any OpenVPN client, including routers. Only TCP and DNS pass through the relay, so use direct Reality or Hysteria 2 profiles for UDP games and calls.
+
+Run on a clean Ubuntu 20.04 / 22.04 / 24.04 VPS in Russia (x86_64 or ARM64):
+
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.5/proxy_panel/install.sh)"
 ```

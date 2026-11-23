@@ -104,7 +104,7 @@
         <div class="card feature">
           <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></div>
           <h3>Каскадный VPN (прокладка)</h3>
-          <p>Второй сервер ставится одной командой и связывается с основным одной строкой. Звучит как чёрная магия, работает как обычный OpenVPN. Скучно, надёжно, без танцев с бубном.</p>
+          <p>Второй сервер в России, к которому подключаются обычным OpenVPN-файлом. OpenVPN до зарубежных серверов давно не работает, а до российского - спокойно. Дальше прокладка сама везёт трафик за границу по Reality. Ставится одной командой, связывается одной строкой.</p>
         </div>
         <div class="card feature">
           <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v7M14 20h3"/></svg></div>
@@ -213,6 +213,22 @@
         </div>
       </div>
       <p><a href="protocols.html">Какой протокол выбрать →</a></p>
+    </section>
+
+    <section class="reveal">
+      <h2 id="two-ways">Напрямую или через прокладку?</h2>
+      <p class="section-sub">Два способа подключиться к одному и тому же VPN. Выбирайте по устройству и по степени терпения пользователя.</p>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>📱 Напрямую к серверу за границей</h3>
+          <p>Устройство подключается к основному серверу по <strong>VLESS Reality</strong>, xHTTP, Hysteria 2, NaiveProxy или Mieru - любым приложением, которое поддерживает выбранный протокол. Второй сервер не нужен. Подходит для телефонов и компьютеров, куда можно поставить приложение. То есть для 95% случаев.</p>
+        </div>
+        <div class="card">
+          <h3>🔌 Через прокладку в России</h3>
+          <p>Устройство подключается по <strong>OpenVPN</strong> к прокладке в России, а она передаёт трафик за границу по Reality. Да, OpenVPN до зарубежных серверов режут, но до российского он работает. Для роутеров, рабочих компьютеров и родственников, которым проще открыть один файл, чем «отсканировать QR-код в приложении».</p>
+        </div>
+      </div>
+      <p><a href="cascade-relay.html">Как устроена прокладка и почему OpenVPN только до неё →</a></p>
     </section>
 
     <section class="reveal">
