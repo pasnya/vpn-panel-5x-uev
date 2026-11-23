@@ -24,9 +24,23 @@ if ! command -v node >/dev/null || [[ $(node -p 'process.versions.node.split("."
 fi
 NODE_BIN=$(command -v node)
 
+# Последний тег релиза через редирект github.com/.../releases/latest: без GitHub API,
+# у которого лимит 60 запросов в час на IP (на общих IP облаков он часто исчерпан).
+github_latest_tag() {
+    local url
+    url=$(curl -fsIL --connect-timeout 10 --max-time 30 -o /dev/null -w '%{url_effective}' "https://github.com/$1/releases/latest") || return 1
+    [[ $url == */releases/tag/* ]] || return 1
+    url=${url##*/releases/tag/}
+    printf '%s\n' "${url//%2F//}"
+}
+
 if [[ ! -x /usr/local/bin/xray ]]; then
     export XRAY_INSTALL_NONINTERACTIVE=1
-    bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install
+    xray_args=()
+    if xray_version=$(github_latest_tag XTLS/Xray-core); then
+        xray_args=(--version "$xray_version")
+    fi
+    bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install "${xray_args[@]}"
 fi
 
 mkdir -p "$RELAY_DIR/configs" /var/log/openvpn

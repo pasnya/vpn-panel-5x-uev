@@ -125,16 +125,31 @@ fi
 
 # ── Установка Xray Core ─────────────────────────────────────────────────────
 log_step "3/7" "Установка VPN-ядер (Xray, Mieru, Hysteria 2)..."
+# Последний тег релиза через редирект github.com/.../releases/latest: без GitHub API,
+# у которого лимит 60 запросов в час на IP (на общих IP облаков он часто исчерпан).
+github_latest_tag() {
+    local url
+    url=$(curl -fsIL --connect-timeout 10 --max-time 30 -o /dev/null -w '%{url_effective}' "https://github.com/$1/releases/latest") || return 1
+    [[ $url == */releases/tag/* ]] || return 1
+    url=${url##*/releases/tag/}
+    printf '%s\n' "${url//%2F//}"
+}
+
 log_info "Установка Xray Core..."
 export XRAY_INSTALL_NONINTERACTIVE=1
-bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install
+XRAY_ARGS=()
+if XRAY_VERSION=$(github_latest_tag XTLS/Xray-core); then
+    XRAY_ARGS=(--version "$XRAY_VERSION")
+fi
+bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install "${XRAY_ARGS[@]}"
 usermod -aG www-data xray || true
 
 # ── Установка Mieru (mita) ─────────────────────────────────────────────────
 log_info "Установка Mieru (mita)..."
-MITA_VERSION=$(curl -s https://api.github.com/repos/enfein/mieru/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+MITA_VERSION=$(github_latest_tag enfein/mieru || true)
+MITA_VERSION=${MITA_VERSION#v}
 MITA_DEB="mita_${MITA_VERSION}_${DEB_ARCH}.deb"
-if wget -q "https://github.com/enfein/mieru/releases/download/v${MITA_VERSION}/${MITA_DEB}"; then
+if [[ -n "$MITA_VERSION" ]] && wget -q "https://github.com/enfein/mieru/releases/download/v${MITA_VERSION}/${MITA_DEB}"; then
     dpkg -i "$MITA_DEB" || apt-get install -f -y
     rm -f "$MITA_DEB"
 else

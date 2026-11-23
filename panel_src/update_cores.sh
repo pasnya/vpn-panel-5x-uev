@@ -4,12 +4,21 @@ set -euo pipefail
 ACTION="${1:-check}"
 CORE="${2:-all}"
 
+# Последний тег релиза через редирект github.com/.../releases/latest: без GitHub API,
+# у которого лимит 60 запросов в час на IP (на общих IP облаков он часто исчерпан).
+github_latest_tag() {
+    local url
+    url=$(curl -fsIL --connect-timeout 10 --max-time 30 -o /dev/null -w '%{url_effective}' "https://github.com/$1/releases/latest") || return 1
+    [[ $url == */releases/tag/* ]] || return 1
+    url=${url##*/releases/tag/}
+    printf '%s\n' "${url//%2F//}"
+}
+
 get_latest_version() {
     local repo="$1"
     local tag=""
     for i in 1 2 3; do
-        tag=$(curl -sf --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null | jq -r '.tag_name // empty' 2>/dev/null)
-        if [ -n "$tag" ]; then
+        if tag=$(github_latest_tag "$repo"); then
             echo "$tag"
             return
         fi
@@ -80,7 +89,11 @@ do_check() {
 
 do_update_xray() {
     echo "Updating Xray..."
-    bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install
+    local args=()
+    local version
+    version=$(get_latest_version "XTLS/Xray-core")
+    [ "$version" != "unknown" ] && args=(--version "$version")
+    bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" install "${args[@]}"
     systemctl restart xray
     echo "Xray updated to $(get_xray_version)"
 }
