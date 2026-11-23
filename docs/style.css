@@ -20,3 +20,4 @@ table{width:100%;border-collapse:collapse;margin:16px 0;font-size:15px}
 th,td{padding:10px 12px;border-bottom:1px solid #293a52;text-align:left}
 th{color:#93c5fd}
 footer{margin-top:44px;padding-top:20px;border-top:1px solid #26354d;color:#8ea3bf;font-size:14px}
+@media (max-width:700px){.wrap{padding:16px}h1{font-size:28px}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}th,td{min-width:110px}}

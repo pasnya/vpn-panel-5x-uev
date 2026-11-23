@@ -10,16 +10,24 @@
   <meta property="og:description" content="Веб-установщик с прогресс-баром, работа без домена по IP (VLESS Reality), 5 протоколов на порту 443 и готовый каскадный сервер-прокладка.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://pasnya.github.io/vpn-panel-5x-uev/">
+  <meta property="og:image" content="https://pasnya.github.io/vpn-panel-5x-uev/og-logo.png">
+  <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="style.css">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "VPN panel 5X-UEV",
+    "alternateName": "5X-UEV",
+    "description": "Бесплатная веб-панель с открытым кодом для личного VPN-сервера на Ubuntu: установка через браузер, VLESS Reality без домена, xHTTP, Hysteria 2, NaiveProxy, Mieru на порту 443 и сервер-прокладка OpenVPN для каскада.",
     "operatingSystem": "Ubuntu 20.04, 22.04, 24.04",
     "applicationCategory": "NetworkingApplication",
+    "isAccessibleForFree": true,
     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-    "url": "https://github.com/pasnya/vpn-panel-5x-uev"
+    "image": "https://pasnya.github.io/vpn-panel-5x-uev/og-logo.png",
+    "url": "https://pasnya.github.io/vpn-panel-5x-uev/",
+    "downloadUrl": "https://github.com/pasnya/vpn-panel-5x-uev/releases",
+    "sameAs": ["https://github.com/pasnya/vpn-panel-5x-uev"]
   }
   </script>
 </head>
@@ -29,8 +37,10 @@
     <div class="brand">🚀 VPN panel 5X-UEV</div>
     <nav>
       <a href="index.html">Главная</a>
+      <a href="clients.html">Подключение</a>
       <a href="cascade-relay.html">Сервер-прокладка</a>
       <a href="protocols.html">Протоколы</a>
+      <a href="compare.html">Сравнение</a>
       <a href="faq.html">FAQ</a>
       <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
     </nav>
@@ -63,6 +73,8 @@
   <pre>bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.3/install.sh)"</pre>
   <p>Откройте полученную ссылку <code>https://IP_СЕРВЕРА:8444/?token=…</code> в браузере и нажмите <strong>«Начать установку»</strong>. Для установки без браузера добавьте флаг <code>--auto</code>.</p>
 
+  <p>Дальше: <a href="clients.html">как подключиться с телефона и компьютера</a> — какую ссылку взять и какое приложение поставить.</p>
+
   <h2>Сравнение с аналогами</h2>
   <table>
     <thead>
@@ -75,6 +87,7 @@
       <tr><td>Проверка DNS перед SSL и диагностика служб</td><td>✅ Встроена</td><td>❌ Нет</td><td>❌ Нет</td></tr>
     </tbody>
   </table>
+  <p>Подробное сравнение с 3x-ui, Marzban и Remnawave — для кого какая панель: <a href="compare.html">«Какую панель VPN выбрать»</a>.</p>
 
   <footer>
     Открытый исходный код под свободной лицензией · <a href="https://github.com/pasnya/vpn-panel-5x-uev">Репозиторий на GitHub</a> · <a href="https://github.com/pasnya/anarise-vpn">Клиент Anarise VPN</a>

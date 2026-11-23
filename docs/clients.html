@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Как подключиться к своему VPN: приложения для Windows, Android, iPhone и macOS</title>
+  <meta name="description" content="Какую ссылку взять в панели (Reality, подписка, OpenVPN) и какое приложение поставить на Windows, Android, iPhone и macOS. Что делать, если VPN не подключается.">
+  <link rel="canonical" href="https://pasnya.github.io/vpn-panel-5x-uev/clients.html">
+  <meta property="og:title" content="Как подключиться к своему VPN с телефона и компьютера">
+  <meta property="og:description" content="Какую ссылку взять в панели и какое приложение поставить на Windows, Android, iPhone и macOS.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://pasnya.github.io/vpn-panel-5x-uev/clients.html">
+  <meta property="og:image" content="https://pasnya.github.io/vpn-panel-5x-uev/og-logo.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "HowTo",
+        "name": "Как подключиться к VPN-серверу на VPN panel 5X-UEV",
+        "step": [
+          {"@type": "HowToStep", "name": "Создайте профиль", "text": "Откройте панель, введите имя клиента и нажмите «Создать». Панель покажет ссылку и QR-код."},
+          {"@type": "HowToStep", "name": "Выберите ссылку", "text": "Без домена используйте VLESS + Reality. С доменом удобнее единая подписка: она содержит все протоколы. Если подключена прокладка, скачайте файл OpenVPN."},
+          {"@type": "HowToStep", "name": "Установите приложение", "text": "Windows и Android: Anarise VPN. iPhone: Shadowrocket, Streisand или sing-box. macOS: Nekoray/Nekobox или sing-box. Для файла прокладки подойдёт любой клиент OpenVPN."},
+          {"@type": "HowToStep", "name": "Импортируйте профиль", "text": "Отсканируйте QR-код или вставьте ссылку из буфера обмена в приложение и включите подключение."}
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {"@type": "Question", "name": "Какую ссылку выбрать, если у сервера нет домена?", "acceptedAnswer": {"@type": "Answer", "text": "VLESS + Reality. Это единственный протокол панели, который работает по IP-адресу сервера без домена. Остальные протоколы и единая подписка появляются после привязки домена."}},
+          {"@type": "Question", "name": "Чем подписка лучше отдельной ссылки?", "acceptedAnswer": {"@type": "Answer", "text": "Подписка — одна ссылка на все доступные протоколы. Приложение само загрузит профили и обновит их, если настройки сервера изменятся."}},
+          {"@type": "Question", "name": "Чем подключаться к серверу-прокладке?", "acceptedAnswer": {"@type": "Answer", "text": "Скачайте в панели файл «OpenVPN для прокладки» (.ovpn) и откройте его в любом клиенте OpenVPN. Через прокладку проходят TCP и DNS; для игр и звонков по UDP используйте прямые профили Reality или Hysteria 2."}}
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Главная", "item": "https://pasnya.github.io/vpn-panel-5x-uev/"},
+          {"@type": "ListItem", "position": 2, "name": "Подключение клиентов", "item": "https://pasnya.github.io/vpn-panel-5x-uev/clients.html"}
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">🚀 VPN panel 5X-UEV</div>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="clients.html">Подключение</a>
+      <a href="cascade-relay.html">Сервер-прокладка</a>
+      <a href="protocols.html">Протоколы</a>
+      <a href="compare.html">Сравнение</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Как подключиться к своему VPN с телефона и компьютера</h1>
+    <p>Сервер установлен — осталось добавить профиль в приложение. Ниже: какую ссылку взять в панели, какое приложение поставить на ваше устройство и что проверить, если подключение не работает.</p>
+  </section>
+
+  <h2>Шаг 1. Создайте профиль и возьмите ссылку</h2>
+  <p>В панели введите имя клиента (например, <code>phone-anna</code>) и нажмите «Создать». Панель сразу покажет ссылку и QR-код. Какую из них использовать:</p>
+  <table>
+    <thead>
+      <tr><th>Ссылка в панели</th><th>Нужен домен</th><th>Когда выбирать</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>VLESS + Reality</strong></td><td>Нет, работает по IP</td><td>Сразу после установки. Основной вариант для большинства.</td></tr>
+      <tr><td><strong>Единая подписка</strong></td><td>Да</td><td>Одна ссылка на все протоколы: приложение само обновит профили.</td></tr>
+      <tr><td>VLESS + xHTTP</td><td>Да</td><td>Если Reality в вашей сети работает нестабильно.</td></tr>
+      <tr><td>Hysteria 2</td><td>Да</td><td>UDP/QUIC: быстро на мобильном интернете и в сетях с потерями.</td></tr>
+      <tr><td>NaiveProxy</td><td>Да</td><td>Трафик неотличим от обычного HTTPS через Caddy.</td></tr>
+      <tr><td>Mieru (URI или Clash-конфиг)</td><td>Да</td><td>Запасной протокол по TCP для клиентов на базе Clash / mihomo.</td></tr>
+      <tr><td>OpenVPN для прокладки (<code>.ovpn</code>)</td><td>—</td><td>Если подключена <a href="cascade-relay.html">сервер-прокладка</a>: стандартный OpenVPN-файл.</td></tr>
+    </tbody>
+  </table>
+  <p>Подробнее о различиях — на странице <a href="protocols.html">«Протоколы»</a>.</p>
+
+  <h2>Шаг 2. Установите приложение</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>🪟 Windows</h3>
+      <p><a href="https://github.com/pasnya/anarise-vpn">Anarise VPN</a> — рекомендуемый клиент: поддерживает все протоколы панели.</p>
+    </div>
+    <div class="card">
+      <h3>🤖 Android</h3>
+      <p><a href="https://github.com/pasnya/anarise-vpn">Anarise VPN</a> — те же протоколы, импорт по QR-коду или ссылке.</p>
+    </div>
+    <div class="card">
+      <h3>🍏 iPhone и iPad</h3>
+      <p><a href="https://apps.apple.com/us/app/shadowrocket/id932747118">Shadowrocket</a>, <a href="https://apps.apple.com/ru/app/streisand/id6450534064">Streisand</a> или <a href="https://apps.apple.com/us/app/sing-box/id6448301546">sing-box</a>.</p>
+    </div>
+    <div class="card">
+      <h3>💻 macOS</h3>
+      <p><a href="https://github.com/MatsuriDayo/nekoray">Nekoray / Nekobox</a> или <a href="https://github.com/SagerNet/sing-box">sing-box</a>.</p>
+    </div>
+  </div>
+  <p>Для файла прокладки <code>.ovpn</code> подойдёт любой клиент OpenVPN на любой платформе, включая роутеры с поддержкой OpenVPN.</p>
+
+  <h2>Шаг 3. Импортируйте профиль</h2>
+  <div class="card">
+    <p><strong>На телефоне:</strong> нажмите «QR-код» в панели и отсканируйте его в приложении (кнопка «+» → «Сканировать QR»).</p>
+    <p><strong>На компьютере:</strong> нажмите «Скопировать», затем в приложении выберите импорт из буфера обмена.</p>
+    <p><strong>Прокладка:</strong> нажмите «Скачать OpenVPN для прокладки» и откройте файл в клиенте OpenVPN.</p>
+    <p>Создавайте отдельный профиль на каждого человека или устройство: так его можно отключить или ограничить по сроку, не трогая остальных.</p>
+  </div>
+
+  <h2>Не подключается: что проверить</h2>
+  <div class="card">
+    <p><strong>Профиль добавлен, но трафика нет.</strong> Проверьте, что службы зелёные в панели, а у клиента не истёк срок действия и он не отключён.</p>
+    <p><strong>Нет пунктов xHTTP, Hysteria 2, NaiveProxy, Mieru.</strong> Эти протоколы появляются после привязки домена. Панель перед выпуском SSL проверит, что A-запись указывает на сервер.</p>
+    <p><strong>Через прокладку не работают игры и звонки.</strong> Это ожидаемо: прокладка передаёт TCP и DNS, а остальной UDP блокирует. Используйте прямые профили Reality или Hysteria 2.</p>
+    <p>Больше ответов — в <a href="faq.html">FAQ</a>.</p>
+  </div>
+
+  <footer>
+    <a href="index.html">← На главную</a> · <a href="compare.html">Сравнение с 3x-ui, Marzban, Remnawave</a> · <a href="https://github.com/pasnya/vpn-panel-5x-uev">GitHub</a>
+  </footer>
+</div>
+</body>
+</html>
