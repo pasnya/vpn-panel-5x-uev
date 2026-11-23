@@ -45,7 +45,7 @@ Need a cascade / relay setup? Deploy the **OpenVPN Relay** module on a second VP
 Run the bootstrap command on a fresh Ubuntu server:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.0/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.1/install.sh)"
 ```
 
 Open the printed `https://SERVER_IP:8444/?token=...` link in your browser and click **Start Installation**.
@@ -53,13 +53,13 @@ Open the printed `https://SERVER_IP:8444/?token=...` link in your browser and cl
 For zero-touch console installation without the browser UI:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.0/install.sh)" -- --auto
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.1/install.sh)" -- --auto
 ```
 
 ### Relay Server (Optional Second VPS)
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.0/proxy_panel/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.1/proxy_panel/install.sh)"
 ```
 
 Paste the generated pairing string into the **Relay Server** section of the main panel.
