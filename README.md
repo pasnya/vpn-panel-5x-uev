@@ -49,14 +49,14 @@
 На чистом сервере запустите команду подготовки. Она скачает установочные файлы и покажет ссылку на временный веб-инсталлятор. Установка служб начнётся только после нажатия кнопки в браузере.
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.2/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.3/install.sh)"
 ```
 
 Откройте выданную ссылку `https://IP_СЕРВЕРА:8444/?token=…`, при желании укажите домен и нажмите **«Начать установку»**. Установщик сам откроет порт `8444/tcp` в `ufw` (если файрвол включён) и закроет его после завершения, а также создаст `swap` при нехватке RAM. У временного веб-инсталлятора самоподписанный сертификат, поэтому браузер покажет предупреждение. Ссылка содержит секретный ключ — не передавайте её посторонним.
 
 Для установки без браузера одной командой добавьте флаг `--auto`:
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.2/install.sh)" -- --auto
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.3/install.sh)" -- --auto
 ```
 
 ### После завершения установки веб-инсталлятор покажет:
@@ -91,7 +91,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/
 На втором чистом VPS с Ubuntu запустите отдельный установщик:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.2/proxy_panel/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.3/proxy_panel/install.sh)"
 ```
 
 Установщик выведет пароль панели прокладки и строку подключения. Вставьте строку в разделе «Сервер-прокладка» основной панели. После связки обычные профили получают кнопку скачивания OpenVPN-файла. Пользователь подключается по OpenVPN к прокладке, а она выбирает доступный канал Reality или xHTTP до основного сервера. Для xHTTP нужен активный домен; Reality работает по IP. При отказе обоих каналов прокладка не выпускает трафик напрямую в интернет.

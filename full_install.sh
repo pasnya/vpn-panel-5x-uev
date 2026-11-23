@@ -6,7 +6,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-PANEL_REF="v0.9.2"
+PANEL_REF="v0.9.3"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
