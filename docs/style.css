@@ -325,3 +325,5 @@ thead .col-us { color: var(--accent); }
   .shot img { height: 200px; }
   .shot-pair .shot img { height: auto; }
 }
+.plain { margin: 0 0 14px; padding-left: 20px; color: var(--text-2); display: grid; gap: 8px; }
+.plain li::marker { color: var(--accent); }

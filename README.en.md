@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/github/license/pasnya/vpn-panel-5x-uev?color=blue)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/pasnya/vpn-panel-5x-uev?color=purple)](https://github.com/pasnya/vpn-panel-5x-uev/releases)
 
-**VPN panel 5X-UEV** is a lightweight, beginner-friendly self-hosted VPN & proxy control panel for Ubuntu. Install everything from a guided browser installer with automatic `UFW` and `swap` setup, create your first **VLESS + Reality** profile in seconds without a domain, and run **5 protocols on port 443** simultaneously.
+**VPN panel 5X-UEV** is a self-hosted VPN & proxy control panel for Ubuntu so simple that even your mom can install it — yes, the one who still keeps passwords on a sticky note under the monitor. No Linux skills required: we already suffered so you don't have to. Install everything from a guided browser installer with automatic `UFW` and `swap` setup, create your first **VLESS + Reality** profile in seconds without a domain, and run **5 protocols on port 443** simultaneously.
 
 Need a cascade / relay setup? Deploy the **OpenVPN Relay** module on a second VPS and pair it with one string: clients connect via standard OpenVPN to the relay, and the relay forwards traffic over an active **Reality** or **xHTTP** tunnel to your main server.
 
@@ -79,6 +79,21 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/
 ```
 
 Paste the generated pairing string into the **Relay Server** section of the main panel.
+
+---
+
+## 🌀 Why Cloudflare WARP?
+
+Short answer: so picky websites stop side-eyeing your server.
+
+Your VPS lives in a data center, and its IP looks like a data-center IP. Some services — ChatGPT, Netflix and other divas — don't love that: CAPTCHAs, a trimmed catalog, or a polite "not today". Your server did nothing wrong; it just has a data-center face.
+
+**Cloudflare WARP** is Cloudflare's free network. The panel connects your server to it, so requests to those picky sites leave through Cloudflare and the site sees a Cloudflare IP instead of your VPS.
+
+* **Smart mode** (default) — only OpenAI, Netflix and ipify (to check your IP) go through WARP; everything else goes direct and fast.
+* **Global mode** — all outgoing server traffic goes through WARP.
+
+It's one button in the panel — no keys, no accounts, no sign-ups. If everything already works for you, leave it alone. The best setting is the one you never had to touch.
 
 ---
 

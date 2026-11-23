@@ -7,6 +7,7 @@ Key facts:
 - Relay install on a second VPS: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.4/proxy_panel/install.sh)"`, then paste the printed connection string into the main panel.
 - No domain needed for VLESS + Reality. xHTTP, Hysteria 2, NaiveProxy, Mieru and the single subscription link require a domain; the panel checks DNS before issuing a Let's Encrypt certificate.
 - The relay passes TCP and DNS; other UDP is blocked, so UDP games/calls should use direct Reality or Hysteria 2 profiles.
+- Cloudflare WARP (optional, one button in the panel, free): outgoing requests leave via Cloudflare so services that restrict data-center IPs see a Cloudflare IP. Smart mode routes only OpenAI, Netflix and ipify through WARP; Global routes all outgoing server traffic.
 - Manages one server (plus relay). For multi-node VPN services with hundreds of users, Marzban or Remnawave fit better.
 - Recommended clients: Anarise VPN (Windows, Android); Shadowrocket, Streisand, sing-box (iPhone); Nekoray/Nekobox, sing-box (macOS); any OpenVPN client for the relay `.ovpn` file.
 
