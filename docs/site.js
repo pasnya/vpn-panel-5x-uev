@@ -71,6 +71,27 @@
       addCopy(pre, function () { return text; });
     });
 
+    // Скриншоты: просмотр в полном размере
+    document.querySelectorAll('a[data-lightbox]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+        e.preventDefault();
+        var box = document.createElement('div');
+        box.className = 'lightbox';
+        box.setAttribute('role', 'dialog');
+        box.setAttribute('aria-label', 'Скриншот');
+        var img = document.createElement('img');
+        img.src = a.getAttribute('href');
+        img.alt = (a.querySelector('img') || {}).alt || '';
+        box.appendChild(img);
+        function close() { box.remove(); document.removeEventListener('keydown', onKey); }
+        function onKey(ev) { if (ev.key === 'Escape') close(); }
+        box.addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(box);
+      });
+    });
+
     // Появление блоков при прокрутке
     var items = document.querySelectorAll('.reveal');
     if ('IntersectionObserver' in window) {

@@ -15,6 +15,22 @@ Need a cascade / relay setup? Deploy the **OpenVPN Relay** module on a second VP
 
 ---
 
+## 🖼️ Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/panel-dashboard.webp" alt="VPN panel 5X-UEV dashboard" width="100%">
+</p>
+
+| Browser installer | Profile with QR code |
+|---|---|
+| <img src="docs/screenshots/installer-done.webp" alt="Web installer result with login data and scripts" width="100%"> | <img src="docs/screenshots/panel-profile.webp" alt="Client profile with subscription link and QR code" width="100%"> |
+| **Clients** | **Server health** |
+| <img src="docs/screenshots/panel-clients.webp" alt="Client list" width="100%"> | <img src="docs/screenshots/panel-health.webp" alt="Server health check" width="100%"> |
+
+Client names, domain and IP in the screenshots are demo data. The interface is in Russian; more screens are on the [docs site](https://pasnya.github.io/vpn-panel-5x-uev/#screenshots).
+
+---
+
 ## ✨ Key Features
 
 * **Browser-Based Installer**: Step-by-step progress bar, optional domain & DNS pre-check, downloadable `.txt` credentials and one-click `.bat` / `.sh` SSH tunnel launchers.

@@ -17,6 +17,22 @@
 
 ---
 
+## 🖼️ Скриншоты
+
+<p align="center">
+  <img src="docs/screenshots/panel-dashboard.webp" alt="Главный экран VPN panel 5X-UEV" width="100%">
+</p>
+
+| Установка в браузере | Профиль с QR-кодом |
+|---|---|
+| <img src="docs/screenshots/installer-done.webp" alt="Итог веб-установки: данные для входа и скрипты" width="100%"> | <img src="docs/screenshots/panel-profile.webp" alt="Профиль клиента с подпиской и QR-кодом" width="100%"> |
+| **Клиенты** | **Здоровье сервера** |
+| <img src="docs/screenshots/panel-clients.webp" alt="Список клиентов" width="100%"> | <img src="docs/screenshots/panel-health.webp" alt="Проверка здоровья сервера" width="100%"> |
+
+Имена клиентов, домен и IP на скриншотах — демонстрационные. Больше экранов — на [сайте документации](https://pasnya.github.io/vpn-panel-5x-uev/#screenshots).
+
+---
+
 ## ✨ Ключевые преимущества
 
 *   **Режим одного окна**: Управление статусом системных служб, клиентами, доменами и ядрами протоколов собрано на одном лаконичном экране.

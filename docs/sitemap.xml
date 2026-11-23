@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/</loc><lastmod>2026-11-23</lastmod><priority>1.0</priority></url>
-  <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/clients.html</loc><lastmod>2026-11-23</lastmod><priority>0.9</priority></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/</loc><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/panel-dashboard.webp</image:loc></image:image><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/installer-progress.webp</image:loc></image:image><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/installer-done.webp</image:loc></image:image><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/panel-profile.webp</image:loc></image:image><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/panel-clients.webp</image:loc></image:image><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/panel-health.webp</image:loc></image:image><lastmod>2026-11-23</lastmod><priority>1.0</priority></url>
+  <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/clients.html</loc><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/panel-profile.webp</image:loc></image:image><image:image><image:loc>https://pasnya.github.io/vpn-panel-5x-uev/screenshots/phone-profile.webp</image:loc></image:image><lastmod>2026-11-23</lastmod><priority>0.9</priority></url>
   <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/cascade-relay.html</loc><lastmod>2026-11-23</lastmod><priority>0.9</priority></url>
   <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/protocols.html</loc><lastmod>2026-11-23</lastmod><priority>0.8</priority></url>
   <url><loc>https://pasnya.github.io/vpn-panel-5x-uev/compare.html</loc><lastmod>2026-11-23</lastmod><priority>0.8</priority></url>
