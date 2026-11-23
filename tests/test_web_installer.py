@@ -4,6 +4,8 @@ import http.client
 import json
 import os
 import pathlib
+import re
+import shutil
 import socket
 import ssl
 import subprocess
@@ -39,11 +41,21 @@ with tempfile.TemporaryDirectory() as folder:
     try:
         for _ in range(40):
             try:
-                status, _ = request(port, "/?token=test-token")
+                status, page = request(port, "/?token=test-token")
                 break
             except (ConnectionError, OSError):
                 time.sleep(0.1)
         assert status == 200
+        scripts = re.findall(r"<script>(.*?)</script>", page.decode("utf-8"), re.S)
+        assert scripts, "Installer page must contain its script"
+        node = shutil.which("node")
+        if node:
+            script_file = root / "page.js"
+            script_file.write_text("\n".join(scripts), encoding="utf-8")
+            check = subprocess.run([node, "--check", str(script_file)], capture_output=True, text=True)
+            assert check.returncode == 0, "Installer page JavaScript has a syntax error:\n" + check.stderr
+        else:
+            print("node not found: skipping installer page JavaScript syntax check")
         assert not (root / "install.log").exists(), "Opening the page must not install anything"
         assert request(port, "/api/status?token=wrong")[0] == 403
         status, data = request(port, "/api/status?token=test-token")

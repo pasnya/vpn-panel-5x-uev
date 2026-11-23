@@ -101,7 +101,8 @@ def finish(process, output):
     threading.Timer(3600, retire).start()
 
 
-PAGE = """<!doctype html>
+# raw-строка: обратные слэши (\n, \r\n) должны попасть в JavaScript как есть, иначе скрипт страницы не разберётся.
+PAGE = r"""<!doctype html>
 <html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Установка VPN panel 5X-UEV</title>
 <style>
