@@ -74,7 +74,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/
 
 ### Relay Server (Optional Second VPS)
 
-**"But OpenVPN gets blocked!"** Yes: in Russia, OpenVPN to **foreign** servers usually doesn't work, the protocol is too recognizable. But OpenVPN to a server **inside Russia** works fine. So the relay goes on a Russian VPS: devices connect to it with a plain OpenVPN file, and the relay carries the traffic across the border to your main server over Reality or xHTTP.
+**"Does OpenVPN even work?"** It does, with a catch: from Russia, OpenVPN connections to **foreign** servers are often unstable - they may not connect or keep dropping. OpenVPN to a server **inside Russia** is stable. So the relay goes on a Russian VPS: devices connect to it with a plain OpenVPN file, and the relay carries the traffic across the border to your main server over Reality or xHTTP.
 
 ```
 Device (.ovpn) --OpenVPN, inside Russia--> Relay in Russia --Reality / xHTTP across the border--> Main server abroad --> Internet
