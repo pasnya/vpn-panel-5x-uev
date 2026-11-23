@@ -3,7 +3,7 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-PANEL_REF=${PANEL_REF:-v0.9.3}
+PANEL_REF=${PANEL_REF:-v0.9.4}
 RELAY_DIR=/opt/vpn-relay
 EASY_DIR=/etc/openvpn/easy-rsa
 PANEL_PORT=8443
