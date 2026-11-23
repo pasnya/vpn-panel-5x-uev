@@ -1,0 +1,7 @@
+# Скрипты выполняются на Linux: CRLF ломает bash (`set: pipefail\r: invalid option name`).
+*.sh   text eol=lf
+*.py   text eol=lf
+*.php  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf

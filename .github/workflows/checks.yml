@@ -7,6 +7,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+      - name: Check line endings
+        run: |
+          bad=$(git ls-files --eol -- '*.sh' '*.py' '*.php' '*.js' '*.json' '*.yml' | grep -E '^i/(crlf|mixed)' || true)
+          if [ -n "$bad" ]; then
+            echo "CRLF line endings found (convert to LF):"
+            echo "$bad"
+            exit 1
+          fi
       - name: Check shell syntax
         run: bash -n install.sh full_install.sh cleanup.sh panel_src/update_cores.sh proxy_panel/install.sh proxy_panel/balancer.sh proxy_panel/check-client.sh
       - name: Check web installer
