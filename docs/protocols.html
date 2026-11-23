@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Протоколы VPN на одном 443 порту: Reality, xHTTP, Hysteria 2, NaiveProxy, Mieru</title>
-  <meta name="description" content="Сравнение протоколов в VPN panel 5X-UEV: какой выбрать без домена, для мобильного интернета и для обхода жёстких блокировок на порту 443.">
+  <meta name="description" content="Сравнение протоколов в VPN panel 5X-UEV: какой выбрать без домена, для мобильного интернета и для нестабильных сетей — все на порту 443.">
   <link rel="canonical" href="https://pasnya.github.io/vpn-panel-5x-uev/protocols.html">
   <meta property="og:image" content="https://pasnya.github.io/vpn-panel-5x-uev/og-logo.png">
   <meta name="twitter:card" content="summary">
@@ -38,7 +38,7 @@
       <tr><td><strong>VLESS + Reality</strong></td><td>❌ Нет (по IP)</td><td>TCP</td><td>Быстрый старт сразу после установки.</td></tr>
       <tr><td><strong>VLESS + xHTTP</strong></td><td>✅ Да</td><td>HTTPS</td><td>Запасной канал через ваш домен и сайт-заглушку.</td></tr>
       <tr><td><strong>Hysteria 2</strong></td><td>✅ Да</td><td>UDP / QUIC</td><td>Максимальная скорость на плохих/мобильных сетях (с port hopping).</td></tr>
-      <tr><td><strong>NaiveProxy (Caddy)</strong></td><td>✅ Поддомен</td><td>HTTPS</td><td>Идеальная маскировка под браузер Chrome через Caddy forwardproxy.</td></tr>
+      <tr><td><strong>NaiveProxy (Caddy)</strong></td><td>✅ Поддомен</td><td>HTTPS</td><td>Трафик неотличим от обычного браузера Chrome (Caddy forwardproxy).</td></tr>
       <tr><td><strong>Mita (Mieru)</strong></td><td>✅ Да</td><td>TCP</td><td>Высокоустойчивый резервный TCP-протокол.</td></tr>
     </tbody>
   </table>

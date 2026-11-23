@@ -7,6 +7,8 @@
 !web_installer.py
 !cleanup.sh
 !README.md
+!README.en.md
+!LICENSE
 !tests/
 !tests/**
 tests/__pycache__/
