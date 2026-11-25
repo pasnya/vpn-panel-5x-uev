@@ -8,8 +8,12 @@ function relay_main_ip(): string {
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5]);
     $ip = trim((string)curl_exec($ch));
     curl_close($ch);
-    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) throw new RuntimeException('Не удалось определить IP основного сервера');
-    return $ip;
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) return $ip;
+    // Запасной вариант, если ipify недоступен: IP, сохранённый установщиком.
+    $paths = json_decode((string)@file_get_contents('/var/www/panel/db/paths.json'), true);
+    $saved = (string)($paths['public_ip'] ?? '');
+    if (filter_var($saved, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) return $saved;
+    throw new RuntimeException('Не удалось определить IP основного сервера');
 }
 
 function relay_bundle(PDO $db, string $uuid): array {

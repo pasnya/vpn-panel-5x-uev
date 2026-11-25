@@ -17,7 +17,9 @@ if (!$user) {
     exit;
 }
 $paths = json_decode(@file_get_contents('/var/www/panel/db/paths.json'), true) ?: [];
+// /tmp очищается при перезагрузке, поэтому запасной вариант - IP, сохранённый установщиком.
 $server = trim(@file_get_contents('/tmp/server_public_ip.txt') ?: '');
+if (!filter_var($server, FILTER_VALIDATE_IP)) $server = (string)($paths['public_ip'] ?? '');
 if (!filter_var($server, FILTER_VALIDATE_IP)) $server = $user['domain_name'] ?: '';
 if (!$server) {
     http_response_code(503);
@@ -43,7 +45,9 @@ if ($user['domain_name']) {
     $links[] = "naive+https://{$name}:{$uuid}@{$user['naive_sub']}:443#Naive-{$name}";
     $hysteria = @file_get_contents('/etc/hysteria/config.yaml') ?: '';
     $obfs = preg_match('/password:\s*"([^"]+)"/', $hysteria, $match) ? $match[1] : '';
-    $links[] = "hysteria2://{$uuid}@{$server}:443?obfs-password=" . rawurlencode($obfs) . "&security=tls&sni={$domain}#Hysteria-{$name}";
+    // Hysteria 2 работает с сертификатом первого активного домена и отклоняет чужой SNI.
+    $hysteriaSni = $db->query("SELECT domain_name FROM domains WHERE ssl_status = 'active' ORDER BY id LIMIT 1")->fetchColumn() ?: $domain;
+    $links[] = "hysteria2://{$uuid}@{$server}:443?obfs-password=" . rawurlencode($obfs) . "&security=tls&sni={$hysteriaSni}#Hysteria-{$name}";
     $mieruPassword = substr(str_replace('-', '', $uuid), 0, 16);
     $links[] = "mieru://{$name}:{$mieruPassword}@{$server}:443?transport=TCP&multiplexing=MULTIPLEXING_LOW#Mieru-{$name}";
 }

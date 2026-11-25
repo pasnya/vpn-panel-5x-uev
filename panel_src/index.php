@@ -9,18 +9,24 @@ if (isset($_GET['logout'])) {
 }
 
 if (!isset($_SESSION['logged_in'])) {
-    if (isset($_POST['login']) && isset($_POST['password'])) {
+    $login_wait = (isset($_POST['login']) && isset($_POST['password'])) ? login_wait_seconds() : 0;
+    if ($login_wait > 0) {
+        http_response_code(429);
+        $error = "Слишком много неудачных попыток. Подождите {$login_wait} с.";
+    } elseif (isset($_POST['login']) && isset($_POST['password'])) {
         $db = new PDO('sqlite:/var/www/panel/db/panel.db');
         $stmt = $db->prepare("SELECT * FROM users WHERE username = :username AND role = 'admin'");
         $stmt->execute([':username' => $_POST['login']]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($user && password_verify($_POST['password'], $user['password'])) {
+            login_record_success();
             session_regenerate_id(true);
             $_SESSION['logged_in'] = true;
             $_SESSION['username'] = $user['username'];
             header("Location: index.php");
             exit;
         } else {
+            login_record_failure();
             $error = "Неверный логин или пароль";
         }
     }
@@ -95,6 +101,8 @@ if (empty($xhttp_path)) {
 
 $domains = $db->query("SELECT * FROM domains ORDER BY domain_name")->fetchAll(PDO::FETCH_ASSOC);
 $active_domains = array_values(array_filter($domains, static function ($d) { return $d['ssl_status'] === 'active'; }));
+// Hysteria 2 работает с одним сертификатом - первого активного домена (см. rebuild_configs.php).
+$hysteria_sni = (string)($db->query("SELECT domain_name FROM domains WHERE ssl_status = 'active' ORDER BY id LIMIT 1")->fetchColumn() ?: '');
 $users = $db->query("
     SELECT u.id, u.username, u.uuid, u.status, u.traffic_limit, u.traffic_used, u.created_at, u.expires_at,
            cc.domain_id
@@ -582,6 +590,7 @@ foreach ($services as $srv) {
 
 </div>
 <script>window.panelServerIp = <?= json_encode($ip_server, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
+<script>window.panelHysteriaSni = <?= json_encode($hysteria_sni, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
     <script>window.justCreatedClientId = <?= isset($_GET['created']) ? (int)$_GET['created'] : 0 ?>; window.relayConnected = <?= is_file('/var/www/panel/db/proxy_panel.json') ? 'true' : 'false' ?>;</script>
 <script src="assets/js/qrcode.min.js"></script>
 <script src="assets/js/main.js"></script>

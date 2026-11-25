@@ -27,6 +27,26 @@ get_latest_version() {
     echo "unknown"
 }
 
+# Свежий Go с go.dev: пакет golang в Ubuntu 20.04/22.04 слишком старый для xcaddy и Caddy.
+install_go() {
+    local arch=$1 release file sha tmp
+    release=$(curl -fsSL --retry 3 'https://go.dev/dl/?mode=json' | jq -r --arg arch "$arch" \
+        '[.[] | select(.stable)][0].files[] | select(.os == "linux" and .arch == $arch and .kind == "archive") | "\(.filename) \(.sha256)"' | head -1) || return 1
+    read -r file sha <<< "$release"
+    [[ -n "$file" && -n "$sha" ]] || return 1
+    if [[ -x /usr/local/go/bin/go && "$(/usr/local/go/bin/go version | awk '{print $3}')" == "${file%%.linux-*}" ]]; then
+        return 0
+    fi
+    tmp=$(mktemp)
+    if ! curl -fsSL --retry 3 "https://go.dev/dl/$file" -o "$tmp" || ! echo "$sha  $tmp" | sha256sum -c - >/dev/null; then
+        rm -f "$tmp"
+        return 1
+    fi
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf "$tmp"
+    rm -f "$tmp"
+}
+
 strip_tag() {
     echo "$1" | sed 's/^v//' | sed 's|^app/||'
 }
@@ -131,11 +151,17 @@ do_update_caddy() {
         echo "ERROR: At least 1.5 GiB of available memory and swap is required to build Caddy"
         exit 1
     fi
-    local build_dir
+    local build_dir go_arch
     build_dir=$(mktemp -d)
     cd "$build_dir"
+    case "$(uname -m)" in
+        x86_64) go_arch=amd64 ;;
+        aarch64) go_arch=arm64 ;;
+        *) echo "ERROR: Unsupported architecture"; exit 1 ;;
+    esac
+    install_go "$go_arch" || { echo "ERROR: Could not install Go from go.dev"; exit 1; }
     export GOPATH=$HOME/go
-    export PATH=$PATH:$GOPATH/bin
+    export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
     go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
     GOWORK=off xcaddy build --with github.com/caddyserver/forwardproxy@caddy2=github.com/klzgrad/forwardproxy@naive
     mv caddy /usr/local/bin/caddy

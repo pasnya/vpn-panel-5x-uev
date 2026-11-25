@@ -31,3 +31,40 @@ function require_admin(bool $mutating = false): void {
         }
     }
 }
+
+// Ограничение подбора пароля. За nginx stream все запросы приходят с 127.0.0.1,
+// поэтому счётчик общий: 5 неудачных попыток подряд - пауза 60 секунд.
+const LOGIN_THROTTLE_FILE = '/var/www/panel/db/login_throttle.json';
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_LOCK_SECONDS = 60;
+
+function login_throttle_update(callable $change): array {
+    $handle = @fopen(LOGIN_THROTTLE_FILE, 'c+');
+    if (!$handle) return ['count' => 0, 'until' => 0];
+    flock($handle, LOCK_EX);
+    $state = json_decode((string)stream_get_contents($handle), true);
+    if (!is_array($state) || ($state['until'] ?? 0) <= time()) $state = ['count' => 0, 'until' => 0];
+    $state = $change($state);
+    ftruncate($handle, 0);
+    rewind($handle);
+    fwrite($handle, json_encode($state));
+    fflush($handle);
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return $state;
+}
+
+function login_wait_seconds(): int {
+    $state = login_throttle_update(static function (array $state): array { return $state; });
+    return $state['count'] >= LOGIN_MAX_FAILURES ? max(0, $state['until'] - time()) : 0;
+}
+
+function login_record_failure(): void {
+    login_throttle_update(static function (array $state): array {
+        return ['count' => $state['count'] + 1, 'until' => time() + LOGIN_LOCK_SECONDS];
+    });
+}
+
+function login_record_success(): void {
+    login_throttle_update(static function (array $state): array { return ['count' => 0, 'until' => 0]; });
+}

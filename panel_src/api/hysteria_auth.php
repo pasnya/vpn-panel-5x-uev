@@ -46,11 +46,7 @@ try {
         echo json_encode([
             "ok" => true,
             "id" => $user['username'],
-            "msg" => "Access granted",
-            "bandwidth" => [
-                "up" => 100000000,
-                "down" => 100000000
-            ]
+            "msg" => "Access granted"
         ]);
     } else {
         echo json_encode([

@@ -24,7 +24,8 @@ function rebuild_configs() {
         $db->exec("UPDATE users SET status = 'disabled' WHERE role = 'client' AND status = 'active' AND ((expires_at IS NOT NULL AND expires_at < datetime('now')) OR (traffic_limit > 0 AND traffic_used >= traffic_limit))");
 
         $all_users = $db->query("SELECT * FROM users WHERE role IN ('client', 'relay') AND status = 'active' AND (expires_at IS NULL OR expires_at >= datetime('now'))")->fetchAll(PDO::FETCH_ASSOC);
-        $domains = $db->query("SELECT * FROM domains WHERE ssl_status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
+        // Порядок важен: первый активный домен даёт сертификат Hysteria 2 и общий вход Caddy.
+        $domains = $db->query("SELECT * FROM domains WHERE ssl_status = 'active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
 
         // --- CLOUDFLARE WARP CHECK (via warp-cli) ---
         $warp_enabled = false;
@@ -146,17 +147,24 @@ server {
 
         $caddyfile_content = "{\n    admin 127.0.0.1:2019\n    auto_https off\n    order forward_proxy before file_server\n}\n";
 
+        // Адрес сайта в Caddyfile должен быть уникальным: два блока ":7443" Caddy не загрузит.
+        // Поэтому каждый поддомен Naive получает свой блок со своим сертификатом (выбор по SNI),
+        // а общий блок ":7443" без tls принимает CONNECT-запросы: у них Host - это адрес
+        // назначения, а не поддомен, и в блоки с именем хоста они не попадают.
+        $forward_proxy = '';
+        if (!empty($caddy_users_block)) {
+            $forward_proxy = str_replace("forward_proxy {", "forward_proxy {\n        hide_ip\n        hide_via\n        probe_resistance", $caddy_users_block);
+        }
         foreach ($domains as $dom) {
-            $n_sub = $dom['naive_sub'];
             $d_name = $dom['domain_name'];
-
-            $caddyfile_content .= "\n:7443 {\n";
+            $caddyfile_content .= "\n" . $dom['naive_sub'] . ":7443 {\n";
             $caddyfile_content .= "    tls /etc/letsencrypt/live/{$d_name}/fullchain.pem /etc/letsencrypt/live/{$d_name}/privkey.pem\n";
-            if (!empty($caddy_users_block)) {
-                $forward_proxy_setup = "forward_proxy {\n        hide_ip\n        hide_via\n        probe_resistance";
-                $caddyfile_content .= str_replace("forward_proxy {", $forward_proxy_setup, $caddy_users_block);
-            }
+            $caddyfile_content .= $forward_proxy;
             $caddyfile_content .= "    root * /var/www/decoy/" . $d_name . "\n    file_server\n}\n";
+        }
+        if (!empty($domains)) {
+            $caddyfile_content .= "\n:7443 {\n" . $forward_proxy;
+            $caddyfile_content .= "    root * /var/www/decoy/" . $domains[0]['domain_name'] . "\n    file_server\n}\n";
         }
 
         panel_write("/etc/caddy/Caddyfile", $caddyfile_content);

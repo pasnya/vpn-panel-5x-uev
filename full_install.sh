@@ -39,6 +39,7 @@ fi
 ADMIN_SECRET=$(openssl rand -hex 12)
 CLIENT_UUID=$(cat /proc/sys/kernel/random/uuid)
 XHTTP_PATH=$(openssl rand -hex 8)
+REALITY_SHORT_ID=$(openssl rand -hex 8)
 
 # ── Авто-Swap для серверов с малым объёмом RAM ──────────────────────────────
 TOTAL_MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 2048)
@@ -109,9 +110,28 @@ EOF
 log_step "2/7" "Установка Caddy (NaiveProxy)..."
 log_info "Установка Caddy с поддержкой NaiveProxy..."
 log_info "Сборка Caddy через xcaddy..."
-apt-get install -y golang
+# Свежий Go с go.dev: пакет golang в Ubuntu 20.04/22.04 слишком старый для xcaddy и Caddy.
+install_go() {
+    local arch=$1 release file sha tmp
+    release=$(curl -fsSL --retry 3 'https://go.dev/dl/?mode=json' | jq -r --arg arch "$arch" \
+        '[.[] | select(.stable)][0].files[] | select(.os == "linux" and .arch == $arch and .kind == "archive") | "\(.filename) \(.sha256)"' | head -1) || return 1
+    read -r file sha <<< "$release"
+    [[ -n "$file" && -n "$sha" ]] || return 1
+    if [[ -x /usr/local/go/bin/go && "$(/usr/local/go/bin/go version | awk '{print $3}')" == "${file%%.linux-*}" ]]; then
+        return 0
+    fi
+    tmp=$(mktemp)
+    if ! curl -fsSL --retry 3 "https://go.dev/dl/$file" -o "$tmp" || ! echo "$sha  $tmp" | sha256sum -c - >/dev/null; then
+        rm -f "$tmp"
+        return 1
+    fi
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf "$tmp"
+    rm -f "$tmp"
+}
+install_go "$DEB_ARCH" || log_error "Не удалось установить Go с go.dev для сборки Caddy."
 export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
+export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
 if ! command -v xcaddy &> /dev/null; then
     go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 fi
@@ -391,7 +411,7 @@ cat > /etc/xray/config.json << EOF
           "show": false, "dest": "yahoo.com:443", "xver": 0,
           "serverNames": [ "yahoo.com", "www.yahoo.com" ],
           "privateKey": "${PRIVATE_KEY}",
-          "shortIds": [ "0123456789abcdef" ]
+          "shortIds": [ "${REALITY_SHORT_ID}" ]
         }
       }
     }
