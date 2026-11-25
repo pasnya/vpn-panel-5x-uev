@@ -248,7 +248,7 @@ foreach ($services as $srv) {
         <p>Клиенты подключаются к прокладке по OpenVPN. Она передаёт трафик на этот VPN-сервер через доступный протокол.</p>
         <div id="relayNotConnected">
             <p>На втором VPS с Ubuntu запустите установщик. Он выдаст строку для связи.</p>
-            <pre class="cfg-code-block">bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.5/proxy_panel/install.sh)"</pre>
+            <pre class="cfg-code-block">bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.6/proxy_panel/install.sh)"</pre>
             <div class="fg"><label for="relayPairCode">Строка подключения прокладки</label><input id="relayPairCode" type="password" autocomplete="off" placeholder="Вставьте строку из установщика"></div>
             <button type="button" class="btn" id="relayConnectButton" onclick="connectRelay()">Подключить прокладку</button>
         </div>
