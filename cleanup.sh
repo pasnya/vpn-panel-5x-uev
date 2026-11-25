@@ -58,7 +58,7 @@ rm -f /usr/local/bin/caddy
 rm -f /usr/local/bin/xray
 rm -f /usr/local/bin/hysteria
 rm -f /usr/bin/mita
-rm -f /usr/local/sbin/vpn-update-cores /usr/local/sbin/vpn-certbot-helper
+rm -f /usr/local/sbin/vpn-update-cores /usr/local/sbin/vpn-certbot-helper /usr/local/sbin/vpn-nginx-sync
 rm -f /etc/cron.d/vpn-panel-expiry /etc/cron.d/vpn-panel-traffic /etc/cron.d/vpn-panel-cert
 dpkg -r mita 2>/dev/null || true
 apt-get purge -y mita 2>/dev/null || true
@@ -110,6 +110,23 @@ rm -f /var/log/nginx/access.log
 # 7. Очистка правил iptables
 log_info "Очистка правил iptables..."
 iptables -t nat -D PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443 2>/dev/null || true
+if command -v iptables-legacy &> /dev/null; then
+    iptables-legacy -t nat -D PREROUTING -p udp --dport 20000:50000 -j REDIRECT --to-ports 443 2>/dev/null || true
+    # Правила старой схемы WARP: весь трафик Naive, Mieru и Hysteria шёл в redsocks.
+    for owner in vpn mita hysteria; do
+        for proto in tcp udp; do
+            while iptables-legacy -t nat -D OUTPUT ! -o lo -m owner --uid-owner "$owner" -p "$proto" -j REDIRECT --to-ports 12345 2>/dev/null; do :; done
+        done
+    done
+fi
+
+# 8. Остатки старой схемы WARP: warp-cli, redsocks, wgcf
+log_info "Удаление warp-cli, redsocks и wgcf (если остались от старых версий)..."
+systemctl disable --now warp-svc redsocks 2>/dev/null || true
+apt-get purge -y cloudflare-warp redsocks 2>/dev/null || true
+rm -f /etc/apt/sources.list.d/cloudflare-client.list /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+rm -f /usr/local/bin/wgcf /etc/redsocks.conf
+rm -f /etc/cron.d/vpn-panel-relay
 if command -v netfilter-persistent &> /dev/null; then
     netfilter-persistent save 2>/dev/null || true
 fi

@@ -14,7 +14,6 @@ $services = [
     'caddy' => 'Caddy (NaiveProxy)',
     'hysteria-server' => 'Hysteria 2 (UDP/QUIC)',
     'mita' => 'Mita (Mieru)',
-    'warp-svc' => 'Cloudflare WARP',
     'cron' => 'Планировщик Cron (SSL/лимиты)',
 ];
 
@@ -31,7 +30,7 @@ $checks[] = [
     'id' => 'services',
     'ok' => $allServicesOk,
     'label' => 'Системные службы',
-    'detail' => $allServicesOk ? 'Все 7 служб работают штатно.' : 'Не работают: ' . implode(', ', $downServices),
+    'detail' => $allServicesOk ? 'Все ' . count($services) . ' служб работают штатно.' : 'Не работают: ' . implode(', ', $downServices),
 ];
 
 $ssOut = (string)@shell_exec('ss -H -lntu 2>/dev/null');

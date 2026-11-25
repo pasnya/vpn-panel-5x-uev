@@ -62,21 +62,7 @@ apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--fo
 apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     curl wget git unzip zip socat sqlite3 jq libnginx-mod-stream \
     nginx certbot python3-certbot-nginx php-fpm php-sqlite3 php-curl php-zip openssl ca-certificates gnupg \
-    iptables-persistent netfilter-persistent redsocks cron
-
-# Cloudflare WARP repository
-log_info "Добавление репозитория Cloudflare WARP..."
-curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg 2>/dev/null
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ ${VERSION_CODENAME} main" > /etc/apt/sources.list.d/cloudflare-client.list
-apt-get update -qq
-apt-get install -y cloudflare-warp
-
-# wgcf binary
-log_info "Установка wgcf..."
-if ! command -v wgcf &> /dev/null; then
-    curl -fsSL "https://github.com/ViRb3/wgcf/releases/download/v2.3.0/wgcf_2.3.0_linux_${DEB_ARCH}" -o /usr/local/bin/wgcf
-    chmod +x /usr/local/bin/wgcf
-fi
+    iptables-persistent netfilter-persistent cron
 
 PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
 PHP_SOCK="/run/php/php${PHP_VER}-fpm.sock"
@@ -181,72 +167,18 @@ log_info "Установка Hysteria 2..."
 bash -c "$(curl -fsSL https://get.hy2.sh)"
 usermod -aG www-data hysteria || true
 
-# ── Cloudflare WARP ─────────────────────────────────────────────────────────
-log_step "4/7" "Настройка Cloudflare WARP..."
-log_info "Настройка Cloudflare WARP..."
-systemctl enable warp-svc 2>/dev/null || true
-systemctl start warp-svc 2>/dev/null || true
-sleep 2
-
-# Register and connect WARP
-log_info "Регистрация в Cloudflare WARP..."
-warp-cli --accept-tos registration new 2>/dev/null || true
-warp-cli --accept-tos mode proxy 2>/dev/null || true
-warp-cli --accept-tos proxy port 40001 2>/dev/null || true
-warp-cli --accept-tos connect 2>/dev/null || true
-sleep 2
-WARP_STATUS=$(warp-cli --accept-tos status 2>/dev/null | head -1 || echo "")
-if echo "$WARP_STATUS" | grep -q "Connected"; then
-    log_success "Cloudflare WARP подключен."
-else
-    log_warn "WARP не подключен. Подключите вручную: warp-cli connect"
-fi
-
-# Redsocks config for transparent proxying
-cat > /etc/redsocks.conf << 'REDSOCKS_EOF'
-base {
-    log_debug = off;
-    log_info = on;
-    log = "syslog:daemon";
-    daemon = on;
-    user = redsocks;
-    group = redsocks;
-    redirector = iptables;
-}
-
-redsocks {
-    local_ip = 127.0.0.1;
-    local_port = 12345;
-    ip = 127.0.0.1;
-    port = 40001;
-    type = socks5;
-}
-REDSOCKS_EOF
-systemctl enable redsocks 2>/dev/null || true
-systemctl start redsocks 2>/dev/null || true
-
-# Create vpn user for UID-based routing
+# ── Служебные пользователи ──────────────────────────────────────────────────
+# Cloudflare WARP подключается кнопкой в панели: это WireGuard-выход Xray, отдельные
+# службы (warp-cli, redsocks) и правила iptables для него не нужны.
+log_step "4/7" "Настройка служебных пользователей..."
+# Пользователь, от которого работает Caddy (NaiveProxy)
 useradd -r -s /usr/sbin/nologin -d /nonexistent vpn 2>/dev/null || true
 usermod -aG www-data vpn 2>/dev/null || true
 usermod -aG www-data mita 2>/dev/null || true
 usermod -aG www-data hysteria 2>/dev/null || true
 
-# Grant vpn user access to configs and certs
-chown -R root:vpn /etc/caddy 2>/dev/null || true
-chmod -R 775 /etc/caddy 2>/dev/null || true
-chmod -R g+rX /etc/letsencrypt /etc/xray /etc/mita /etc/caddy /etc/hysteria 2>/dev/null
-
-# cgroup vpn for fallback
-mkdir -p /sys/fs/cgroup/vpn 2>/dev/null || true
-
-# iptables rules for WARP routing via UID
-iptables-legacy -t nat -A OUTPUT ! -o lo -m owner --uid-owner vpn -p tcp -j REDIRECT --to-ports 12345 2>/dev/null || true
-iptables-legacy -t nat -A OUTPUT ! -o lo -m owner --uid-owner vpn -p udp -j REDIRECT --to-ports 12345 2>/dev/null || true
-iptables-legacy -t nat -A OUTPUT ! -o lo -m owner --uid-owner mita -p tcp -j REDIRECT --to-ports 12345 2>/dev/null || true
-iptables-legacy -t nat -A OUTPUT ! -o lo -m owner --uid-owner mita -p udp -j REDIRECT --to-ports 12345 2>/dev/null || true
-iptables-legacy -t nat -A OUTPUT ! -o lo -m owner --uid-owner hysteria -p tcp -j REDIRECT --to-ports 12345 2>/dev/null || true
-iptables-legacy -t nat -A OUTPUT ! -o lo -m owner --uid-owner hysteria -p udp -j REDIRECT --to-ports 12345 2>/dev/null || true
-netfilter-persistent save 2>/dev/null || true
+# Права на конфиги ядер выставляются ниже, в разделе «Права на файлы».
+chmod -R g+rX /etc/letsencrypt 2>/dev/null || true
 
 # ── Nginx: stream block ─────────────────────────────────────────────────────
 log_info "Создание базовых конфигурационных файлов Nginx..."
@@ -306,6 +238,13 @@ server {
     ssl_certificate /etc/nginx/conf.d/dummy.crt;
     ssl_certificate_key /etc/nginx/conf.d/dummy.key;
     location / { return 403; }
+}
+
+# Заглушка для fallback Reality: клиент с ключом Reality, но без своего UUID, видит обычный 404.
+server {
+    listen 127.0.0.1:8090 default_server;
+    server_name _;
+    location / { return 404; }
 }
 
 server {
@@ -389,6 +328,7 @@ cat > /etc/xray/config.json << EOF
   "inbounds": [
     { "tag": "api", "listen": "127.0.0.1", "port": 10085, "protocol": "dokodemo-door", "settings": { "address": "127.0.0.1" } },
     {
+      "tag": "xhttp",
       "port": 10001,
       "listen": "127.0.0.1",
       "protocol": "vless",
@@ -400,10 +340,11 @@ cat > /etc/xray/config.json << EOF
       }
     },
     {
+      "tag": "reality",
       "port": 10002,
       "listen": "127.0.0.1",
       "protocol": "vless",
-      "settings": { "clients": [], "decryption": "none", "fallbacks": [{ "dest": 8080, "xver": 0 }] },
+      "settings": { "clients": [], "decryption": "none", "fallbacks": [{ "dest": 8090, "xver": 0 }] },
       "streamSettings": {
         "network": "tcp",
         "security": "reality",
@@ -417,7 +358,7 @@ cat > /etc/xray/config.json << EOF
     }
   ],
   "outbounds": [{ "protocol": "freedom" }],
-  "api": { "tag": "api", "services": ["StatsService"] },
+  "api": { "tag": "api", "services": ["StatsService", "HandlerService"] },
   "stats": {},
   "policy": { "levels": { "0": { "statsUserUplink": true, "statsUserDownlink": true } } },
   "routing": { "rules": [{ "type": "field", "inboundTag": ["api"], "outboundTag": "api" }] }
@@ -475,16 +416,14 @@ sed -i "s/CHANGE_SALAMANDER_OBFS_PASSWORD/$SALAMANDER_PASS/g" /etc/hysteria/conf
 log_info "Настройка расширенных правил sudoers..."
 cat > /etc/sudoers.d/panel << 'EOF'
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
-www-data ALL=(root) NOPASSWD: /usr/sbin/nginx -t
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart xray
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart caddy
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart mita
 www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hysteria-server
-www-data ALL=(root) NOPASSWD: /usr/bin/systemctl start redsocks
 www-data ALL=(ALL) NOPASSWD: /usr/bin/mita reload
 www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-certbot-helper *
+www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-nginx-sync ""
 www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-update-cores update xray, /usr/local/sbin/vpn-update-cores update hysteria, /usr/local/sbin/vpn-update-cores update mita, /usr/local/sbin/vpn-update-cores update caddy
 www-data ALL=(root) NOPASSWD: /usr/bin/journalctl -u nginx -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u caddy -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u xray -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u mita -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u hysteria-server -n 100 --no-pager -o short-iso
 EOF
@@ -520,6 +459,7 @@ else
 fi
 
 install -o root -g root -m 0755 /var/www/panel/update_cores.sh /usr/local/sbin/vpn-update-cores
+install -o root -g root -m 0755 /var/www/panel/nginx_sync.sh /usr/local/sbin/vpn-nginx-sync
 cat > /etc/cron.d/vpn-panel-expiry << 'EOF'
 */5 * * * * www-data /usr/bin/php /var/www/panel/expire_clients.php >/dev/null 2>&1
 EOF
@@ -615,14 +555,35 @@ fi
 
 # ── Права на файлы ─────────────────────────────────────────────────────────
 log_info "Настройка прав доступа..."
-chown -R root:www-data /etc/caddy /etc/xray /etc/mita /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d /etc/hysteria
-chmod -R 775 /etc/caddy /etc/xray /etc/mita /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d /etc/hysteria
-chmod 664 /etc/caddy/Caddyfile /etc/xray/config.json /etc/mita/config.json /etc/nginx/conf.d/domains.map /etc/hysteria/config.yaml || true
+# Конфиги ядер: панель (www-data) их переписывает, службы читают через группу www-data.
+# Посторонним пользователям ничего: там ключ Reality, UUID и пароли клиентов.
+CORE_DIRS=(/etc/caddy /etc/xray /etc/mita /etc/hysteria)
+chown -R root:www-data "${CORE_DIRS[@]}"
+find "${CORE_DIRS[@]}" -type d -exec chmod 750 {} +
+find "${CORE_DIRS[@]}" -type f -exec chmod 660 {} +
+chmod 640 /etc/hysteria/selfsigned.key /etc/hysteria/selfsigned.crt
+chmod 664 /etc/xray/public.key
+# Xray-install запускает xray от nobody: даём процессу группу www-data для чтения конфига.
+mkdir -p /etc/systemd/system/xray.service.d
+cat > /etc/systemd/system/xray.service.d/20-panel.conf << 'EOF'
+[Service]
+SupplementaryGroups=www-data
+EOF
 
-chown -R www-data:www-data /var/www/panel
+# nginx принадлежит только root: конфиги доменов пишет хелпер vpn-nginx-sync.
+chown -R root:root /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d
+find /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d -type d -exec chmod 755 {} +
+chmod 644 /etc/nginx/conf.d/domains.map /etc/nginx/conf.d/dummy.crt
+chmod 600 /etc/nginx/conf.d/dummy.key
+
+# Код панели только для чтения, писать www-data может лишь в db/.
+chown -R root:www-data /var/www/panel
+find /var/www/panel -type d -exec chmod 750 {} +
+find /var/www/panel -type f -exec chmod 640 {} +
+chown -R www-data:www-data /var/www/panel/db
+chmod 700 /var/www/panel/db
+find /var/www/panel/db -type f -exec chmod 600 {} +
 chown -R www-data:www-data /var/www/decoy
-chmod -R 775 /var/www/panel/db
-chmod 664 /var/www/panel/db/panel.db || true
 
 echo "<h1>Welcome to default decoy page</h1>" > /var/www/html/index.html
 chown www-data:www-data /var/www/html/index.html
@@ -631,11 +592,8 @@ chown www-data:www-data /var/www/html/index.html
 log_step "7/7" "Настройка сети, файрвола и запуск всех служб..."
 log_info "Запуск системных служб..."
 systemctl daemon-reload
-systemctl enable nginx "$PHP_FPM_SERVICE" xray mita hysteria-server warp-svc caddy redsocks cron
-systemctl restart nginx "$PHP_FPM_SERVICE" xray mita hysteria-server
-systemctl restart warp-svc
-sleep 2
-systemctl restart caddy redsocks
+systemctl enable nginx "$PHP_FPM_SERVICE" xray mita hysteria-server caddy cron
+systemctl restart nginx "$PHP_FPM_SERVICE" xray mita hysteria-server caddy
 
 chgrp -R www-data /etc/letsencrypt || true
 chmod -R g+rX /etc/letsencrypt || true
@@ -676,8 +634,10 @@ if [[ "$IPV4_SERVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     chown www-data:www-data /var/www/panel/db/paths.json
 fi
 
-INSTALLER_DIR_OUT=${VPN_INSTALLER_DIR:-/opt/vpn-panel-installer}
-if [[ -d "$INSTALLER_DIR_OUT" ]]; then
+# Карточку с паролем сохраняем только для веб-установщика: он покажет её и удалит через час.
+# При установке в консоли (--auto) пароль выводится только на экран.
+INSTALLER_DIR_OUT=${VPN_INSTALLER_DIR:-}
+if [[ -n "$INSTALLER_DIR_OUT" && -d "$INSTALLER_DIR_OUT" ]]; then
     jq -n \
         --arg ip "$IPV4_SERVER" \
         --arg admin_path "$ADMIN_SECRET" \
@@ -698,5 +658,10 @@ echo -e "Reality Public Key: $PUBLIC_KEY"
 echo -e "Админка доступна через SSH-туннель: ssh -L 8080:127.0.0.1:8080 root@${IPV4_SERVER}"
 echo -e "URL: http://127.0.0.1:8080/${ADMIN_SECRET}/index.php"
 echo -e "Логин: admin"
-echo -e "Пароль: ${ADMIN_PASSWORD:-используйте ранее установленный пароль}"
+if [[ -n "$INSTALLER_DIR_OUT" ]]; then
+    # Журнал веб-установки остаётся на диске, поэтому пароль в него не пишем.
+    echo -e "Пароль: показан в веб-установщике"
+else
+    echo -e "Пароль: ${ADMIN_PASSWORD:-используйте ранее установленный пароль}"
+fi
 echo -e "=================================================================="

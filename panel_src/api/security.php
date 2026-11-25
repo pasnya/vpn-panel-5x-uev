@@ -32,14 +32,20 @@ function require_admin(bool $mutating = false): void {
     }
 }
 
-// Ограничение подбора пароля. За nginx stream все запросы приходят с 127.0.0.1,
-// поэтому счётчик общий: 5 неудачных попыток подряд - пауза 60 секунд.
-const LOGIN_THROTTLE_FILE = '/var/www/panel/db/login_throttle.json';
+// Ограничение подбора пароля. За nginx stream все запросы приходят с 127.0.0.1, поэтому
+// отличить посетителей по IP нельзя. Счётчики раздельные по каналу входа: подбор пароля через
+// домен (порт 8443) не блокирует вход через SSH-туннель (порт 8080), и наоборот.
+// 5 неудачных попыток подряд - пауза 60 секунд.
 const LOGIN_MAX_FAILURES = 5;
 const LOGIN_LOCK_SECONDS = 60;
 
+function login_throttle_file(): string {
+    $channel = (string)($_SERVER['SERVER_PORT'] ?? '') === '8080' ? 'tunnel' : 'domain';
+    return '/var/www/panel/db/login_throttle_' . $channel . '.json';
+}
+
 function login_throttle_update(callable $change): array {
-    $handle = @fopen(LOGIN_THROTTLE_FILE, 'c+');
+    $handle = @fopen(login_throttle_file(), 'c+');
     if (!$handle) return ['count' => 0, 'until' => 0];
     flock($handle, LOCK_EX);
     $state = json_decode((string)stream_get_contents($handle), true);

@@ -8,7 +8,7 @@ Key facts:
 - No domain needed for VLESS + Reality. xHTTP, Hysteria 2, NaiveProxy, Mieru and the single subscription link require a domain; the panel checks DNS before issuing a Let's Encrypt certificate.
 - The relay is meant for a VPS inside Russia: OpenVPN connections from Russia to foreign servers are often unstable (may not connect or keep dropping), while OpenVPN to a domestic server is stable; the relay forwards traffic abroad over Reality or xHTTP. The main server abroad is reached directly with any client for VLESS Reality, xHTTP, Hysteria 2, NaiveProxy or Mieru; OpenVPN is used only for the relay.
 - The relay passes TCP and DNS; other UDP is blocked, so UDP games/calls should use direct Reality or Hysteria 2 profiles.
-- Cloudflare WARP (optional, one button in the panel, free): outgoing requests leave via Cloudflare so services that restrict data-center IPs see a Cloudflare IP. Smart mode routes only OpenAI, Netflix and ipify through WARP; Global routes all outgoing server traffic.
+- Cloudflare WARP (optional, one button in the panel, free): outgoing requests leave via Cloudflare so services that restrict data-center IPs see a Cloudflare IP. Smart mode routes only OpenAI, Netflix and ipify through WARP; Global routes all VPN client traffic.
 - Manages one server (plus relay). For multi-node VPN services with hundreds of users, Marzban or Remnawave fit better.
 - Recommended clients: Anarise VPN (Windows, Android); Shadowrocket, Streisand, sing-box (iPhone); Nekoray/Nekobox, sing-box (macOS); any OpenVPN client for the relay `.ovpn` file.
 

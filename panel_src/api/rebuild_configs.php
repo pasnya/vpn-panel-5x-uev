@@ -16,6 +16,130 @@ function panel_write(string $path, string $content): void {
     }
 }
 
+// Пишет файл только при изменении содержимого. true - файл изменился и службу надо обновить.
+function panel_write_if_changed(string $path, string $content): bool {
+    if (@file_get_contents($path) === $content) return false;
+    panel_write($path, $content);
+    return true;
+}
+
+function panel_xray_without_clients(array $config): array {
+    foreach ($config['inbounds'] ?? [] as $i => $inbound) {
+        if (($inbound['protocol'] ?? '') === 'vless') $config['inbounds'][$i]['settings']['clients'] = [];
+    }
+    return $config;
+}
+
+// Запускает `xray api adu/rmu` и проверяет итоговую строку "... N user(s) ...":
+// при частичной ошибке команда всё равно завершается с кодом 0.
+function panel_xray_api(string $command, int $expected): bool {
+    exec('/usr/local/bin/xray api ' . $command . ' 2>&1', $output, $code);
+    if ($code !== 0 || !preg_match_all('/(\d+)\s+user/i', implode("\n", $output), $m)) return false;
+    return (int)end($m[1]) === $expected;
+}
+
+// Меняет пользователей работающего Xray без рестарта, чтобы не обрывать соединения остальных.
+// false - менялось что-то кроме пользователей или API не справился: тогда нужен рестарт.
+function panel_xray_hot_update(?array $old, array $new): bool {
+    if (!$old || panel_xray_without_clients($old) != panel_xray_without_clients($new)) return false;
+    if (!in_array('HandlerService', $new['api']['services'] ?? [], true)) return false;
+    $server = '--server=127.0.0.1:10085';
+    foreach ($new['inbounds'] as $i => $inbound) {
+        if (($inbound['protocol'] ?? '') !== 'vless') continue;
+        $tag = (string)($inbound['tag'] ?? '');
+        if ($tag === '') return false;
+        $before = [];
+        foreach ($old['inbounds'][$i]['settings']['clients'] ?? [] as $client) $before[$client['email']] = $client;
+        $after = [];
+        foreach ($inbound['settings']['clients'] ?? [] as $client) $after[$client['email']] = $client;
+        $remove = [];
+        $add = [];
+        foreach ($before as $email => $client) if (!isset($after[$email]) || $after[$email] != $client) $remove[] = (string)$email;
+        foreach ($after as $email => $client) if (!isset($before[$email]) || $before[$email] != $client) $add[] = $client;
+        if ($remove && !panel_xray_api('rmu ' . $server . ' -tag=' . escapeshellarg($tag) . ' ' . implode(' ', array_map('escapeshellarg', $remove)), count($remove))) return false;
+        if ($add) {
+            $file = tempnam(sys_get_temp_dir(), 'xray-adu-');
+            if ($file === false) return false;
+            chmod($file, 0600);
+            $inbound['settings']['clients'] = $add;
+            file_put_contents($file, json_encode(['inbounds' => [$inbound]]));
+            $ok = panel_xray_api('adu ' . $server . ' ' . escapeshellarg($file), count($add));
+            unlink($file);
+            if (!$ok) return false;
+        }
+    }
+    return true;
+}
+
+// Cloudflare WARP подключается как WireGuard-выход Xray. Остальные ядра (Hysteria 2, Mieru, Naive)
+// при включённом WARP отправляют исходящий трафик в локальный SOCKS-вход Xray, и общая
+// маршрутизация решает, что идёт через WARP, а что напрямую.
+const WARP_CHAIN_PORT = 10808;
+const WARP_CHAIN_TAG = 'warp-chain';
+const WARP_PEER_PUBLIC_KEY = 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=';
+// IPv4-адрес, а не engage.cloudflareclient.com: доменный endpoint Xray разрешает случайно в IPv4
+// или IPv6, а на сервере без IPv6 такое рукопожатие не проходит.
+const WARP_PEER_ENDPOINT = '162.159.192.1:2408';
+// Умный режим: через WARP идут только сервисы, которые не любят IP дата-центров.
+const WARP_SMART_DOMAINS = [
+    'domain:openai.com', 'domain:chatgpt.com', 'domain:oaistatic.com', 'domain:oaiusercontent.com', 'domain:sora.com',
+    'domain:netflix.com', 'domain:netflix.net', 'domain:nflxvideo.net', 'domain:nflximg.net', 'domain:nflximg.com',
+    'domain:nflxext.com', 'domain:nflxso.net',
+    'domain:ipify.org',
+];
+const PRIVATE_IP_RANGES = [
+    '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '169.254.0.0/16',
+    '::1/128', 'fc00::/7', 'fe80::/10',
+];
+
+// Включённый WARP из warp.json или null. Битый файл считается выключенным WARP.
+function panel_warp_settings(): ?array {
+    $raw = @file_get_contents('/var/www/panel/db/warp.json');
+    $warp = $raw ? json_decode($raw, true) : null;
+    if (!is_array($warp) || ($warp['status'] ?? '') !== 'enabled') return null;
+    $data = $warp['data'] ?? [];
+    $key = (string)($data['private_key'] ?? '');
+    if (!preg_match('~^[A-Za-z0-9+/]{43}=$~', $key)) return null;
+    $address = [];
+    if (filter_var($data['v4'] ?? '', FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) $address[] = $data['v4'] . '/32';
+    if (filter_var($data['v6'] ?? '', FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) $address[] = $data['v6'] . '/128';
+    if (!$address) return null;
+    $reserved = $data['reserved'] ?? [];
+    $reserved = (is_array($reserved) && count($reserved) === 3) ? array_map('intval', array_values($reserved)) : [0, 0, 0];
+    $peerKey = (string)($data['peer_public_key'] ?? '');
+    if (!preg_match('~^[A-Za-z0-9+/]{43}=$~', $peerKey)) $peerKey = WARP_PEER_PUBLIC_KEY;
+    $endpoint = (string)($data['endpoint'] ?? '');
+    if (!preg_match('/^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/', $endpoint)) $endpoint = WARP_PEER_ENDPOINT;
+    return [
+        'mode' => ($warp['mode'] ?? 'smart') === 'all' ? 'all' : 'smart',
+        'outbound' => [
+            'tag' => 'warp',
+            'protocol' => 'wireguard',
+            'settings' => [
+                'secretKey' => $key,
+                'address' => $address,
+                'peers' => [['publicKey' => $peerKey, 'endpoint' => $endpoint, 'allowedIPs' => ['0.0.0.0/0', '::/0']]],
+                'reserved' => $reserved,
+                'mtu' => 1280,
+                'noKernelTun' => true,
+            ],
+        ],
+    ];
+}
+
+// Убирает из YAML ключи верхнего уровня вместе с вложенными строками.
+function panel_yaml_strip_keys(string $yaml, array $keys): string {
+    $out = [];
+    $skip = false;
+    foreach (preg_split('/\r?\n/', $yaml) as $line) {
+        if (preg_match('/^([A-Za-z0-9_]+)\s*:/', $line, $m)) {
+            $skip = in_array($m[1], $keys, true);
+        }
+        if (!$skip) $out[] = $line;
+    }
+    return rtrim(implode("\n", $out)) . "\n";
+}
+
 function rebuild_configs() {
         $db = new PDO('sqlite:/var/www/panel/db/panel.db');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -27,17 +151,9 @@ function rebuild_configs() {
         // Порядок важен: первый активный домен даёт сертификат Hysteria 2 и общий вход Caddy.
         $domains = $db->query("SELECT * FROM domains WHERE ssl_status = 'active' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- CLOUDFLARE WARP CHECK (via warp-cli) ---
-        $warp_enabled = false;
-        $warp_status = trim(shell_exec('warp-cli status 2>/dev/null | head -1') ?? '');
-        if (strpos($warp_status, 'Connected') !== false) {
-            $warp_enabled = true;
-        }
-
-        // --- VPN CGROUP FOR WARP ---
-        if ($warp_enabled) {
-            shell_exec('sudo /usr/bin/systemctl start redsocks 2>/dev/null');
-        }
+        // --- CLOUDFLARE WARP (WireGuard-выход Xray) ---
+        $warp = panel_warp_settings();
+        $chain_url = 'socks5://127.0.0.1:' . WARP_CHAIN_PORT;
 
         $paths_file = '/var/www/panel/db/paths.json';
         $admin_path = 'admin';
@@ -48,92 +164,10 @@ function rebuild_configs() {
             $xhttp_path = trim($paths['xhttp_path'] ?? $xhttp_path, '/');
         }
 
-        $php_ver = PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;
-        $php_sock = "/run/php/php" . $php_ver . "-fpm.sock";
-
-        // --- NGINX DOMAINS.MAP ---
-        $map_content = "";
-        foreach ($domains as $dom) {
-            $map_content .= $dom['domain_name'] . " nginx_web;\n";
-            $map_content .= $dom['naive_sub'] . " caddy_naive;\n";
-        }
-        panel_write("/etc/nginx/conf.d/domains.map", $map_content);
-
-        // --- NGINX SITE CONFIGS ---
-        foreach ($domains as $dom) {
-            $d_name = $dom['domain_name'];
-            $nginx_conf = "/etc/nginx/sites-available/" . $d_name;
-
-            $conf = "
-server {
-    listen 127.0.0.1:8443 ssl http2;
-    server_name " . $d_name . ";
-
-    ssl_certificate /etc/letsencrypt/live/" . $d_name . "/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/" . $d_name . "/privkey.pem;
-
-    root /var/www/decoy/" . $d_name . ";
-    index index.html;
-
-    location /" . $admin_path . "/assets/ {
-        root /var/www;
-        rewrite ^/" . $admin_path . "/assets/(.*)$ /panel/assets/\$1 break;
-    }
-
-    location /" . $admin_path . "/ {
-        root /var/www/panel;
-        rewrite ^/" . $admin_path . "/(.*)$ /\$1 break;
-        include snippets/fastcgi-php.conf;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        fastcgi_pass unix:" . $php_sock . ";
-    }
-
-    location ~ ^/sub/([a-fA-F0-9-]{36})$ {
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME /var/www/panel/api/sub.php;
-        fastcgi_param QUERY_STRING token=\$1;
-        fastcgi_pass unix:" . $php_sock . ";
-    }
-
-    location /" . $xhttp_path . " {
-        proxy_redirect off;
-        proxy_pass http://127.0.0.1:10001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \"upgrade\";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_buffering off;
-        proxy_request_buffering off;
-    }
-
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-}";
-
-            panel_write($nginx_conf, $conf);
-
-            $symlink = "/etc/nginx/sites-enabled/" . $d_name;
-            if (file_exists($symlink) || is_link($symlink)) { @unlink($symlink); }
-            @symlink($nginx_conf, $symlink);
-        }
-
-        $active_domains = array_column($domains, 'domain_name');
-        $sites_available = glob("/etc/nginx/sites-available/*");
-        foreach ($sites_available as $f) {
-            $basename = basename($f);
-            if ($basename === 'default') continue;
-            if (!in_array($basename, $active_domains)) {
-                @unlink($f);
-                @unlink("/etc/nginx/sites-enabled/" . $basename);
-            }
-        }
-
-        exec('/usr/bin/sudo /usr/sbin/nginx -t 2>&1', $nginx_check, $nginx_code);
-        if ($nginx_code !== 0) throw new RuntimeException('Nginx config invalid: ' . implode("\n", $nginx_check));
-        panel_service_action('nginx', 'reload');
+        // --- NGINX ---
+        // Конфиги nginx собирает root-хелпер из проверенных данных базы: панель в /etc/nginx не пишет.
+        exec('/usr/bin/sudo /usr/local/sbin/vpn-nginx-sync 2>&1', $nginx_output, $nginx_code);
+        if ($nginx_code !== 0) throw new RuntimeException('Nginx config invalid: ' . implode("\n", $nginx_output));
 
         // --- CADDY (NAIVE) ---
         $caddy_users_block = "";
@@ -154,6 +188,10 @@ server {
         $forward_proxy = '';
         if (!empty($caddy_users_block)) {
             $forward_proxy = str_replace("forward_proxy {", "forward_proxy {\n        hide_ip\n        hide_via\n        probe_resistance", $caddy_users_block);
+            if ($warp) {
+                // С upstream Naive отдаёт все соединения в Xray, а тот решает: WARP или напрямую.
+                $forward_proxy = str_replace("probe_resistance", "probe_resistance\n        upstream " . $chain_url, $forward_proxy);
+            }
         }
         foreach ($domains as $dom) {
             $d_name = $dom['domain_name'];
@@ -167,16 +205,26 @@ server {
             $caddyfile_content .= "    root * /var/www/decoy/" . $domains[0]['domain_name'] . "\n    file_server\n}\n";
         }
 
-        panel_write("/etc/caddy/Caddyfile", $caddyfile_content);
-        panel_service_action('caddy', 'reload');
+        if (panel_write_if_changed("/etc/caddy/Caddyfile", $caddyfile_content)) {
+            panel_service_action('caddy', 'reload');
+        }
 
         // --- XRAY (REALITY + XHTTP) ---
         $xray_config_path = '/etc/xray/config.json';
         if (file_exists($xray_config_path)) {
-            $xray_config = json_decode(file_get_contents($xray_config_path), true);
+            $xray_raw = file_get_contents($xray_config_path);
+            $xray_config = json_decode($xray_raw, true);
+            $xray_before = $xray_config;
             if ($xray_config) {
+                $sniffing = ['enabled' => true, 'destOverride' => ['http', 'tls', 'quic'], 'routeOnly' => true];
+                $xray_config['inbounds'] = array_values(array_filter($xray_config['inbounds'], static function ($inbound) {
+                    return ($inbound['tag'] ?? '') !== WARP_CHAIN_TAG;
+                }));
                 foreach ($xray_config['inbounds'] as &$inbound) {
                     if (isset($inbound['protocol']) && $inbound['protocol'] == 'vless') {
+                        // Умному режиму нужен домен назначения: sniffing достаёт его из TLS/HTTP/QUIC.
+                        if ($warp) $inbound['sniffing'] = $sniffing;
+                        else unset($inbound['sniffing']);
                         $inbound['settings']['clients'] = [];
                         foreach ($all_users as $u) {
                             $client = ["id" => $u['uuid'], "email" => $u['username']];
@@ -186,22 +234,50 @@ server {
                     }
                     if (isset($inbound['port']) && $inbound['port'] == 10001) {
                         $inbound['streamSettings']['xhttpSettings']['path'] = "/" . $xhttp_path . "/";
+                        $inbound['tag'] = $inbound['tag'] ?? 'xhttp';
+                    }
+                    if (isset($inbound['port']) && $inbound['port'] == 10002) {
+                        // Теги нужны API для добавления пользователей без рестарта.
+                        $inbound['tag'] = $inbound['tag'] ?? 'reality';
+                        // Fallback Reality ведёт на заглушку 8090, а не на админку (8080).
+                        foreach ($inbound['settings']['fallbacks'] ?? [] as $f => $fallback) {
+                            if (($fallback['dest'] ?? null) == 8080) $inbound['settings']['fallbacks'][$f]['dest'] = 8090;
+                        }
                     }
                 }
                 unset($inbound);
 
-                $xray_config['outbounds'] = [["protocol" => "freedom"]];
-                $xray_config['api'] = ["tag" => "api", "services" => ["StatsService"]];
+                // Первый выход - выход по умолчанию, поэтому "direct" всегда первым.
+                $outbounds = [["tag" => "direct", "protocol" => "freedom"]];
+                $rules = [["type" => "field", "inboundTag" => ["api"], "outboundTag" => "api"]];
+                if ($warp) {
+                    $xray_config['inbounds'][] = [
+                        "tag" => WARP_CHAIN_TAG, "listen" => "127.0.0.1", "port" => WARP_CHAIN_PORT, "protocol" => "socks",
+                        "settings" => ["auth" => "noauth", "udp" => true], "sniffing" => $sniffing,
+                    ];
+                    $outbounds[] = $warp['outbound'];
+                    $rules[] = ["type" => "field", "ip" => PRIVATE_IP_RANGES, "outboundTag" => "direct"];
+                    $rules[] = $warp['mode'] === 'all'
+                        ? ["type" => "field", "network" => "tcp,udp", "outboundTag" => "warp"]
+                        : ["type" => "field", "domain" => WARP_SMART_DOMAINS, "outboundTag" => "warp"];
+                }
+                $xray_config['outbounds'] = $outbounds;
+                $xray_config['api'] = ["tag" => "api", "services" => ["StatsService", "HandlerService"]];
                 $xray_config['stats'] = new stdClass();
                 $xray_config['policy'] = ["levels" => ["0" => ["statsUserUplink" => true, "statsUserDownlink" => true]]];
-                $xray_config['routing'] = ["rules" => [["type" => "field", "inboundTag" => ["api"], "outboundTag" => "api"]]];
+                $xray_config['routing'] = ["rules" => $rules];
                 $has_api = false;
                 foreach ($xray_config['inbounds'] as $inbound) if (($inbound['tag'] ?? '') === 'api') $has_api = true;
                 if (!$has_api) $xray_config['inbounds'][] = ["tag" => "api", "listen" => "127.0.0.1", "port" => 10085, "protocol" => "dokodemo-door", "settings" => ["address" => "127.0.0.1"]];
                 unset($xray_config['dns']);
 
-                panel_write($xray_config_path, json_encode($xray_config, JSON_PRETTY_PRINT));
-                panel_service_action('xray', 'restart');
+                $xray_new = json_encode($xray_config, JSON_PRETTY_PRINT);
+                if ($xray_new !== $xray_raw) {
+                    panel_write($xray_config_path, $xray_new);
+                    if (!panel_xray_hot_update($xray_before, $xray_config)) {
+                        panel_service_action('xray', 'restart');
+                    }
+                }
             }
         }
 
@@ -227,8 +303,11 @@ server {
             $hysteria_yaml = preg_replace('/key:\s*[^\n\r]+/', 'key: ' . $key_path, $hysteria_yaml);
             $hysteria_yaml = preg_replace('/url:\s*http:\/\/127\.0\.0\.1:\d+[^\n\r]*/', 'url: http://127.0.0.1:8080/' . $admin_path . '/api/hysteria_auth.php', $hysteria_yaml);
 
-            $hysteria_yaml = preg_replace('/outbounds?:\s*\n(\s+.*\n)*/i', '', $hysteria_yaml);
-            $hysteria_yaml = rtrim($hysteria_yaml);
+            $hysteria_yaml = panel_yaml_strip_keys($hysteria_yaml, ['outbounds', 'acl']);
+            if ($warp) {
+                // Единственный выход Hysteria - локальный SOCKS Xray, маршрут выбирает Xray.
+                $hysteria_yaml .= "outbounds:\n  - name: xray\n    type: socks5\n    socks5:\n      addr: 127.0.0.1:" . WARP_CHAIN_PORT . "\n";
+            }
 
             if ($hysteria_yaml !== file_get_contents($hysteria_config_path)) {
                 panel_write($hysteria_config_path, $hysteria_yaml);
@@ -252,15 +331,18 @@ server {
                 } else {
                     $mita_config['users'][] = ["name" => "placeholder", "password" => "placeholder_pass_12345"];
                 }
-                panel_write($mita_config_path, json_encode($mita_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-                panel_service_action('mita', 'restart');
+                if ($warp) {
+                    $mita_config['egress'] = [
+                        "proxies" => [["name" => "xray", "protocol" => "SOCKS5_PROXY_PROTOCOL", "host" => "127.0.0.1", "port" => WARP_CHAIN_PORT]],
+                        "rules" => [["ipRanges" => ["*"], "domainNames" => ["*"], "action" => "PROXY", "proxyNames" => ["xray"]]],
+                    ];
+                } else {
+                    unset($mita_config['egress']);
+                }
+                if (panel_write_if_changed($mita_config_path, json_encode($mita_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))) {
+                    panel_service_action('mita', 'restart');
+                }
             }
         }
-
-        // Re-assign VPN services to cgroup after restarts
-        if ($warp_enabled) {
-            sleep(2);
-        }
-
 }
 ?>

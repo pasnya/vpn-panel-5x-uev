@@ -102,7 +102,7 @@ Your VPS lives in a data center, and its IP looks like a data-center IP. Some se
 **Cloudflare WARP** is Cloudflare's free network. The panel connects your server to it, so requests to those picky sites leave through Cloudflare and the site sees a Cloudflare IP instead of your VPS.
 
 * **Smart mode** (default) - only OpenAI, Netflix and ipify (to check your IP) go through WARP; everything else goes direct and fast.
-* **Global mode** - all outgoing server traffic goes through WARP.
+* **Global mode** - all VPN client traffic goes through WARP.
 
 It's one button in the panel - no keys, no accounts, no sign-ups. If everything already works for you, leave it alone. The best setting is the one you never had to touch.
 

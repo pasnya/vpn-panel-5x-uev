@@ -89,6 +89,12 @@ try {
         $v4 = $res_data['config']['interface']['addresses']['v4'] ?? '';
         $v6 = $res_data['config']['interface']['addresses']['v6'] ?? '';
         $client_id_b64 = $res_data['config']['client_id'] ?? '';
+        $peer = $res_data['config']['peers'][0] ?? [];
+        $peer_public_key = is_string($peer['public_key'] ?? null) ? $peer['public_key'] : '';
+        // Cloudflare отдаёт endpoint.v4 вида "162.159.192.1:0": берём IPv4 и стандартный порт WireGuard WARP.
+        $endpoint = '';
+        $endpoint_v4 = is_string($peer['endpoint']['v4'] ?? null) ? preg_replace('/:\d+$/', '', $peer['endpoint']['v4']) : '';
+        if (filter_var($endpoint_v4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) $endpoint = $endpoint_v4 . ':2408';
         
         $reserved = [];
         if ($client_id_b64) {
@@ -123,13 +129,15 @@ try {
                 'private_key' => $private_key,
                 'v4' => $v4,
                 'v6' => $v6,
-                'reserved' => $reserved
+                'reserved' => $reserved,
+                'peer_public_key' => $peer_public_key,
+                'endpoint' => $endpoint
             ]
         ];
-        
-        file_put_contents($warp_file, json_encode($warp_json, JSON_PRETTY_PRINT));
+
+        save_warp($warp_file, $warp_json);
         trigger_rebuild();
-        
+
         echo json_encode(["success" => true, "message" => "Cloudflare WARP успешно зарегистрирован и включен."]);
         exit;
         
@@ -144,8 +152,8 @@ try {
         }
         
         $warp_json['status'] = ($warp_json['status'] ?? 'disabled') === 'enabled' ? 'disabled' : 'enabled';
-        
-        file_put_contents($warp_file, json_encode($warp_json, JSON_PRETTY_PRINT));
+
+        save_warp($warp_file, $warp_json);
         trigger_rebuild();
         
         $msg = $warp_json['status'] === 'enabled' ? "WARP успешно включен." : "WARP успешно выключен.";
@@ -168,8 +176,8 @@ try {
         }
         
         $warp_json['mode'] = $mode;
-        
-        file_put_contents($warp_file, json_encode($warp_json, JSON_PRETTY_PRINT));
+
+        save_warp($warp_file, $warp_json);
         trigger_rebuild();
         
         echo json_encode(["success" => true, "mode" => $mode, "message" => "Режим маршрутизации успешно изменен."]);
@@ -196,6 +204,8 @@ try {
             exit;
         }
         
+        // Ключ WireGuard и токен Cloudflare в браузер не отдаём: интерфейсу они не нужны.
+        unset($warp_json['data']['private_key'], $warp_json['data']['access_token']);
         $warp_json['registered'] = true;
         echo json_encode($warp_json);
         exit;
@@ -207,6 +217,15 @@ try {
     http_response_code(500);
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
     exit;
+}
+
+function save_warp($file, $data) {
+    $temporary = $file . '.new';
+    if (file_put_contents($temporary, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX) === false) {
+        throw new Exception("Не удалось сохранить настройки WARP.");
+    }
+    chmod($temporary, 0600);
+    rename($temporary, $file);
 }
 
 function base64url_to_base64($str) {

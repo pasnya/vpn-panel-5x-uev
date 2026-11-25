@@ -49,8 +49,11 @@ try {
     if ($db->query('PRAGMA quick_check')->fetchColumn() !== 'ok') throw new RuntimeException('Database check failed');
     $db->query('SELECT id FROM users LIMIT 1');
     $db->query('SELECT id FROM domains LIMIT 1');
-    foreach ($db->query("SELECT username, uuid FROM users WHERE role = 'client'") as $user) {
-        if (!preg_match('/^[a-zA-Z0-9_-]{1,64}$/', $user['username']) || !preg_match('/^[a-f0-9-]{36}$/i', $user['uuid'])) throw new RuntimeException('Invalid client in backup');
+    // Имена и UUID всех пользователей (в том числе служебных relay) попадают в конфиги Caddy и Xray.
+    foreach ($db->query("SELECT username, uuid, role FROM users") as $user) {
+        if (!in_array($user['role'], ['admin', 'client', 'relay'], true)
+            || !preg_match('/^[a-zA-Z0-9_-]{1,64}$/', $user['username'])
+            || !preg_match('/^[a-f0-9-]{36}$/i', $user['uuid'])) throw new RuntimeException('Invalid user in backup');
     }
     foreach ($db->query('SELECT domain_name, naive_sub FROM domains') as $domain) {
         foreach ([$domain['domain_name'], $domain['naive_sub']] as $name) if (!preg_match('/^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/', $name)) throw new RuntimeException('Invalid domain in backup');

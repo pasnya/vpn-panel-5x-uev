@@ -1,6 +1,8 @@
 <?php
 header('Content-Type: application/json');
-if (($_SERVER['REMOTE_ADDR'] ?? '') !== '127.0.0.1' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+// Hysteria обращается сюда напрямую на 127.0.0.1:8080. Через домен (8443) запросы тоже приходят
+// с 127.0.0.1 (их проксирует nginx stream), поэтому проверяем ещё и порт.
+if (($_SERVER['REMOTE_ADDR'] ?? '') !== '127.0.0.1' || (string)($_SERVER['SERVER_PORT'] ?? '') !== '8080' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(403);
     exit(json_encode(['ok' => false]));
 }
@@ -55,9 +57,10 @@ try {
         ]);
     }
 } catch (Exception $e) {
+    error_log('Hysteria auth failed: ' . $e->getMessage());
     echo json_encode([
         "ok" => false,
-        "msg" => "Database error: " . $e->getMessage()
+        "msg" => "Internal error"
     ]);
 }
 ?>
