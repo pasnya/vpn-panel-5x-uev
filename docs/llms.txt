@@ -3,8 +3,8 @@
 > Free open-source web panel for a personal VPN server on Ubuntu 20.04/22.04/24.04, made for beginners without Linux experience. Installation runs in the browser with a progress bar; the first VLESS + Reality profile works over the server IP without a domain. With a domain it adds VLESS xHTTP, Hysteria 2, NaiveProxy and Mieru on port 443, plus Cloudflare WARP. An optional second VPS acts as an OpenVPN relay (cascade VPN) that forwards traffic to the main server over Reality or xHTTP.
 
 Key facts:
-- Install on a clean Ubuntu VPS as root: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.6/install.sh)"`, then open the printed `https://SERVER_IP:8444/?token=...` link. Add `--auto` to install without the browser.
-- Relay install on a second VPS: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.6/proxy_panel/install.sh)"`, then paste the printed connection string into the main panel.
+- Install on a clean Ubuntu VPS as root: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/install.sh)"`, then open the printed `https://SERVER_IP:8444/?token=...` link. Add `--auto` to install without the browser.
+- Relay install on a second VPS: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/proxy_panel/install.sh)"`, then paste the printed connection string into the main panel.
 - No domain needed for VLESS + Reality. xHTTP, Hysteria 2, NaiveProxy, Mieru and the single subscription link require a domain; the panel checks DNS before issuing a Let's Encrypt certificate.
 - The relay is meant for a VPS inside Russia: OpenVPN connections from Russia to foreign servers are often unstable (may not connect or keep dropping), while OpenVPN to a domestic server is stable; the relay forwards traffic abroad over Reality or xHTTP. The main server abroad is reached directly with any client for VLESS Reality, xHTTP, Hysteria 2, NaiveProxy or Mieru; OpenVPN is used only for the relay.
 - The relay passes TCP and DNS; other UDP is blocked, so UDP games/calls should use direct Reality or Hysteria 2 profiles.

@@ -2,7 +2,7 @@
 # Подготовка веб-установщика (или автоматическая установка при флаге --auto).
 set -euo pipefail
 
-PANEL_REF=${PANEL_REF:-v0.9.6}
+PANEL_REF=${PANEL_REF:-v0.9.7}
 INSTALLER_DIR=/opt/vpn-panel-installer
 INSTALLER_PORT=8444
 BASE_URL="https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/${PANEL_REF}"
