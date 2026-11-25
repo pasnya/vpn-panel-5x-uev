@@ -29,7 +29,7 @@ echo ""
 
 # 1. Останавливаем и отключаем службы
 log_info "Остановка служб..."
-for srv in nginx caddy xray mita hysteria-server; do
+for srv in nginx caddy xray mita hysteria-server vpn-panel-update-auto.timer; do
     systemctl stop "$srv" 2>/dev/null || true
     systemctl disable "$srv" 2>/dev/null || true
 done
@@ -50,6 +50,7 @@ rm -f /etc/systemd/system/xray.service
 rm -f /etc/systemd/system/xray@.service
 rm -rf /etc/systemd/system/xray.service.d
 rm -rf /etc/systemd/system/mita.service.d
+rm -f /etc/systemd/system/vpn-panel-update.service /etc/systemd/system/vpn-panel-update-auto.service /etc/systemd/system/vpn-panel-update-auto.timer
 systemctl daemon-reload
 
 # 3. Удаляем бинарники
@@ -58,7 +59,9 @@ rm -f /usr/local/bin/caddy
 rm -f /usr/local/bin/xray
 rm -f /usr/local/bin/hysteria
 rm -f /usr/bin/mita
-rm -f /usr/local/sbin/vpn-update-cores /usr/local/sbin/vpn-certbot-helper /usr/local/sbin/vpn-nginx-sync
+rm -f /usr/local/sbin/vpn-update-cores /usr/local/sbin/vpn-certbot-helper /usr/local/sbin/vpn-nginx-sync /usr/local/sbin/vpn-panel-update
+rm -rf /var/lib/vpn-panel-update /var/www/panel.new /var/www/panel.old
+rm -f /var/log/vpn-panel-update.log /etc/nginx/conf.d/reality-fallback.conf
 rm -f /etc/cron.d/vpn-panel-expiry /etc/cron.d/vpn-panel-traffic /etc/cron.d/vpn-panel-cert
 dpkg -r mita 2>/dev/null || true
 apt-get purge -y mita 2>/dev/null || true

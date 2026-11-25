@@ -6,7 +6,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-PANEL_REF="v0.9.7"
+PANEL_REF="v0.9.8"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -412,25 +412,6 @@ EOF
 SALAMANDER_PASS=$(openssl rand -hex 16)
 sed -i "s/CHANGE_SALAMANDER_OBFS_PASSWORD/$SALAMANDER_PASS/g" /etc/hysteria/config.yaml
 
-# ── Sudoers ─────────────────────────────────────────────────────────────────
-log_info "Настройка расширенных правил sudoers..."
-cat > /etc/sudoers.d/panel << 'EOF'
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart xray
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart caddy
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart mita
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hysteria-server
-www-data ALL=(ALL) NOPASSWD: /usr/bin/mita reload
-www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-certbot-helper *
-www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-nginx-sync ""
-www-data ALL=(root) NOPASSWD: /usr/local/sbin/vpn-update-cores update xray, /usr/local/sbin/vpn-update-cores update hysteria, /usr/local/sbin/vpn-update-cores update mita, /usr/local/sbin/vpn-update-cores update caddy
-www-data ALL=(root) NOPASSWD: /usr/bin/journalctl -u nginx -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u caddy -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u xray -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u mita -n 100 --no-pager -o short-iso, /usr/bin/journalctl -u hysteria-server -n 100 --no-pager -o short-iso
-EOF
-echo "Defaults:www-data !use_pty" > /etc/sudoers.d/panel_pty
-chmod 440 /etc/sudoers.d/panel_pty
-chmod 440 /etc/sudoers.d/panel
-
 # ── Certbot renewal hook ───────────────────────────────────────────────────
 mkdir -p /etc/letsencrypt/renewal-hooks/deploy
 cat > /etc/letsencrypt/renewal-hooks/deploy/01-permissions.sh << 'EOF'
@@ -458,37 +439,6 @@ else
     fi
 fi
 
-install -o root -g root -m 0755 /var/www/panel/update_cores.sh /usr/local/sbin/vpn-update-cores
-install -o root -g root -m 0755 /var/www/panel/nginx_sync.sh /usr/local/sbin/vpn-nginx-sync
-cat > /etc/cron.d/vpn-panel-expiry << 'EOF'
-*/5 * * * * www-data /usr/bin/php /var/www/panel/expire_clients.php >/dev/null 2>&1
-EOF
-chmod 644 /etc/cron.d/vpn-panel-expiry
-cat > /etc/cron.d/vpn-panel-traffic << 'EOF'
-*/5 * * * * www-data /usr/bin/php /var/www/panel/traffic_monitor.php >/dev/null 2>&1
-EOF
-chmod 644 /etc/cron.d/vpn-panel-traffic
-cat > /etc/cron.d/vpn-panel-relay << 'EOF'
-* * * * * www-data /usr/bin/php /var/www/panel/relay_sync.php >/dev/null 2>&1
-EOF
-chmod 644 /etc/cron.d/vpn-panel-relay
-cat > /etc/cron.d/vpn-panel-cert << 'EOF'
-* * * * * www-data /usr/bin/php /var/www/panel/issue_domains.php >/dev/null 2>&1
-EOF
-chmod 644 /etc/cron.d/vpn-panel-cert
-cat > /usr/local/sbin/vpn-certbot-helper << 'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-[[ $# -eq 2 ]] || exit 2
-for domain in "$@"; do
-    [[ "$domain" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$ ]] || exit 2
-done
-/usr/bin/certbot certonly --webroot -w /var/www/html -d "$1" -d "$2" --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email --preferred-challenges http
-/usr/bin/chgrp -R www-data /etc/letsencrypt
-/usr/bin/chmod -R g+rX /etc/letsencrypt
-EOF
-chown root:root /usr/local/sbin/vpn-certbot-helper
-chmod 755 /usr/local/sbin/vpn-certbot-helper
 
 # ── SQLite3: инициализация БД ───────────────────────────────────────────────
 log_info "Инициализация SQLite3..."
@@ -563,12 +513,6 @@ find "${CORE_DIRS[@]}" -type d -exec chmod 750 {} +
 find "${CORE_DIRS[@]}" -type f -exec chmod 660 {} +
 chmod 640 /etc/hysteria/selfsigned.key /etc/hysteria/selfsigned.crt
 chmod 664 /etc/xray/public.key
-# Xray-install запускает xray от nobody: даём процессу группу www-data для чтения конфига.
-mkdir -p /etc/systemd/system/xray.service.d
-cat > /etc/systemd/system/xray.service.d/20-panel.conf << 'EOF'
-[Service]
-SupplementaryGroups=www-data
-EOF
 
 # nginx принадлежит только root: конфиги доменов пишет хелпер vpn-nginx-sync.
 chown -R root:root /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d
@@ -576,13 +520,8 @@ find /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/conf.d -type
 chmod 644 /etc/nginx/conf.d/domains.map /etc/nginx/conf.d/dummy.crt
 chmod 600 /etc/nginx/conf.d/dummy.key
 
-# Код панели только для чтения, писать www-data может лишь в db/.
-chown -R root:www-data /var/www/panel
-find /var/www/panel -type d -exec chmod 750 {} +
-find /var/www/panel -type f -exec chmod 640 {} +
-chown -R www-data:www-data /var/www/panel/db
-chmod 700 /var/www/panel/db
-find /var/www/panel/db -type f -exec chmod 600 {} +
+# Код панели, root-хелперы, sudoers, cron и таймер самообновления: общий скрипт с обновлением.
+bash /var/www/panel/system_setup.sh
 chown -R www-data:www-data /var/www/decoy
 
 echo "<h1>Welcome to default decoy page</h1>" > /var/www/html/index.html

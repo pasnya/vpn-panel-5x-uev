@@ -16,7 +16,7 @@ jobs:
             exit 1
           fi
       - name: Check shell syntax
-        run: bash -n install.sh full_install.sh cleanup.sh panel_src/update_cores.sh panel_src/nginx_sync.sh proxy_panel/install.sh proxy_panel/balancer.sh proxy_panel/check-client.sh
+        run: bash -n install.sh full_install.sh cleanup.sh panel_src/update_cores.sh panel_src/nginx_sync.sh panel_src/panel_update.sh panel_src/system_setup.sh proxy_panel/install.sh proxy_panel/balancer.sh proxy_panel/check-client.sh
       - name: Check web installer
         run: python3 -m py_compile web_installer.py && python3 tests/test_web_installer.py
       - name: Check PHP syntax

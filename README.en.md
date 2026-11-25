@@ -61,7 +61,7 @@ Client names, domain and IP in the screenshots are demo data. The interface is i
 Run the bootstrap command on a fresh Ubuntu server:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.8/install.sh)"
 ```
 
 Open the printed `https://SERVER_IP:8444/?token=...` link in your browser and click **Start Installation**.
@@ -69,7 +69,17 @@ Open the printed `https://SERVER_IP:8444/?token=...` link in your browser and cl
 For zero-touch console installation without the browser UI:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/install.sh)" -- --auto
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.8/install.sh)" -- --auto
+```
+
+### Updates
+
+The panel updates itself: once a day it checks GitHub releases and installs the new version without disconnecting clients. The database, keys and settings stay in place, and if the new version fails to build the service configs, the previous one is restored (see `/var/log/vpn-panel-update.log`). Manual update and the auto-update switch live in the **Cores** card.
+
+Servers installed before v0.9.8 need a one-time bootstrap:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.8/install.sh)" -- --update
 ```
 
 ### Relay Server (Optional Second VPS)
@@ -86,7 +96,7 @@ Device (.ovpn) --OpenVPN, inside Russia--> Relay in Russia --Reality / xHTTP acr
 Run on a clean Ubuntu 20.04 / 22.04 / 24.04 VPS in Russia (x86_64 or ARM64):
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/proxy_panel/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.8/proxy_panel/install.sh)"
 ```
 
 Paste the generated pairing string into the **Relay Server** section of the main panel.

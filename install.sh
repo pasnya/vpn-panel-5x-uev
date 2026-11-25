@@ -1,20 +1,33 @@
 #!/usr/bin/env bash
 # Подготовка веб-установщика (или автоматическая установка при флаге --auto).
+# Флаг --update обновляет уже установленную панель до последнего релиза.
 set -euo pipefail
 
-PANEL_REF=${PANEL_REF:-v0.9.7}
+PANEL_REF=${PANEL_REF:-v0.9.8}
 INSTALLER_DIR=/opt/vpn-panel-installer
 INSTALLER_PORT=8444
 BASE_URL="https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/${PANEL_REF}"
 AUTO_INSTALL=${AUTO_INSTALL:-0}
+UPDATE_ONLY=0
 
 for arg in "$@"; do
     case "$arg" in
         --auto) AUTO_INSTALL=1 ;;
+        --update) UPDATE_ONLY=1 ;;
     esac
 done
 
 [[ $EUID -eq 0 ]] || { echo 'Запустите команду от root (sudo).' >&2; exit 1; }
+if [[ "$UPDATE_ONLY" == "1" ]]; then
+    # Серверам до v0.9.8 ставим обновлятор вручную, дальше панель обновляется сама.
+    [[ -e /var/www/panel/db/panel.db ]] || { echo 'Панель не установлена: запустите команду без --update.' >&2; exit 1; }
+    tmp_update=$(mktemp)
+    trap 'rm -f "$tmp_update"' EXIT
+    curl -fsSL --retry 3 "$BASE_URL/panel_src/panel_update.sh" -o "$tmp_update"
+    bash -n "$tmp_update"
+    bash "$tmp_update" apply
+    exit
+fi
 [[ ! -e /var/www/panel/db/panel.db ]] || { echo 'Панель уже установлена. Веб-установщик предназначен для нового сервера.' >&2; exit 1; }
 . /etc/os-release
 [[ $ID == ubuntu && $VERSION_ID =~ ^(20\.04|22\.04|24\.04)$ ]] || { echo 'Нужна Ubuntu 20.04, 22.04 или 24.04.' >&2; exit 1; }

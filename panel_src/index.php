@@ -248,7 +248,7 @@ foreach ($services as $srv) {
         <p>Клиенты подключаются к прокладке по OpenVPN. Она передаёт трафик на этот VPN-сервер через доступный протокол.</p>
         <div id="relayNotConnected">
             <p>На втором VPS с Ubuntu запустите установщик. Он выдаст строку для связи.</p>
-            <pre class="cfg-code-block">bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/proxy_panel/install.sh)"</pre>
+            <pre class="cfg-code-block">bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.8/proxy_panel/install.sh)"</pre>
             <div class="fg"><label for="relayPairCode">Строка подключения прокладки</label><input id="relayPairCode" type="password" autocomplete="off" placeholder="Вставьте строку из установщика"></div>
             <button type="button" class="btn" id="relayConnectButton" onclick="connectRelay()">Подключить прокладку</button>
         </div>
@@ -532,6 +532,17 @@ foreach ($services as $srv) {
                 <button class="btn btn-sm" id="btn-check-cores" onclick="checkCores()">Проверить обновления</button>
             </div>
             <div id="coresList">
+                <div class="cores-row" id="coreRow-panel">
+                    <div class="cores-info">
+                        <div class="cores-name">Панель 5x-uev</div>
+                        <div class="cores-desc" id="panelUpdateMsg">Сама проверяет релизы раз в сутки</div>
+                        <label class="cores-desc" style="display:flex;align-items:center;gap:6px;margin-top:4px;cursor:pointer">
+                            <input type="checkbox" id="panelAutoUpdate" style="width:auto" onchange="setPanelAutoUpdate(this.checked)"> Обновлять автоматически
+                        </label>
+                    </div>
+                    <span class="cores-ver" id="ver-panel"><?= htmlspecialchars(trim((string)@file_get_contents(__DIR__ . '/VERSION')) ?: '-') ?></span>
+                    <button class="btn btn-sm btn-outline" id="btn-update-panel" disabled onclick="updatePanel()">Сначала проверьте</button>
+                </div>
                 <?php
                 $cores = [
                     ['key'=>'xray',    'name'=>'Xray Core',    'desc'=>'Служба VLESS + Reality + xhttp'],

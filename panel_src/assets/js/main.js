@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDomainAutofill();
     fetchWarpStatus();
     refreshRelayStatus();
+    loadPanelUpdate();
     if (window.justCreatedClientId) {
         const button = document.querySelector(`[data-client-id="${window.justCreatedClientId}"]`);
         if (button) button.click();
@@ -346,6 +347,7 @@ function checkCores() {
     btn.disabled = true;
     btn.textContent = 'Проверка...';
 
+    checkPanelUpdate();
     fetch('api/update_core.php?action=check&core=all')
         .then(r => r.json())
         .then(data => {
@@ -399,6 +401,99 @@ function updateCore(core) {
             btn.disabled = false;
             btn.textContent = 'Ошибка';
             alert('Ошибка во время обновления ядра.');
+        });
+}
+
+// Самообновление панели
+let panelUpdateTimer = null;
+
+function panelUpdateRequest(action) {
+    return fetch('api/panel_update.php?action=' + action, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
+    }).then(r => r.json().then(data => {
+        if (!r.ok) throw new Error(data.error || 'Ошибка обновления панели');
+        return data;
+    }));
+}
+
+function renderPanelUpdate(data) {
+    const verEl = document.getElementById('ver-panel');
+    const btn = document.getElementById('btn-update-panel');
+    const msg = document.getElementById('panelUpdateMsg');
+    const auto = document.getElementById('panelAutoUpdate');
+    if (!verEl || !btn) return;
+    verEl.textContent = data.current;
+    auto.checked = data.auto;
+    auto.disabled = !data.installed;
+    if (!data.installed) {
+        msg.textContent = 'Обновлятор не установлен: один раз запустите install.sh --update на сервере';
+        btn.disabled = true;
+        btn.textContent = 'Недоступно';
+        return;
+    }
+    if (data.message) msg.textContent = data.message;
+    const newer = data.latest && data.latest !== data.current;
+    verEl.className = data.latest ? (newer ? 'tag tag-warn' : 'tag tag-ok') : 'cores-ver';
+    clearTimeout(panelUpdateTimer);
+    if (data.status === 'running') {
+        btn.disabled = true;
+        btn.className = 'btn btn-sm';
+        btn.textContent = 'Обновление...';
+        panelUpdateTimer = setTimeout(loadPanelUpdate, 3000);
+    } else if (newer) {
+        btn.disabled = false;
+        btn.className = 'btn btn-sm';
+        btn.textContent = 'Обновить до ' + data.latest;
+    } else if (data.latest) {
+        btn.disabled = true;
+        btn.className = 'btn btn-sm btn-outline';
+        btn.textContent = 'Актуально';
+    }
+}
+
+function loadPanelUpdate() {
+    const wasRunning = document.getElementById('btn-update-panel')?.textContent === 'Обновление...';
+    fetch('api/panel_update.php?action=status')
+        .then(r => r.json())
+        .then(data => {
+            renderPanelUpdate(data);
+            // Новая версия встала: перезагружаем страницу, чтобы подтянуть её интерфейс.
+            if (wasRunning && data.status === 'ok') location.reload();
+        })
+        .catch(() => {});
+}
+
+function checkPanelUpdate() {
+    panelUpdateRequest('check').then(renderPanelUpdate).catch(e => {
+        const msg = document.getElementById('panelUpdateMsg');
+        if (msg) msg.textContent = e.message;
+    });
+}
+
+function updatePanel() {
+    if (!confirm('Обновить панель? Клиенты не отключатся, страница перезагрузится после установки.')) return;
+    const btn = document.getElementById('btn-update-panel');
+    btn.disabled = true;
+    btn.textContent = 'Обновление...';
+    panelUpdateRequest('update')
+        .then(data => { data.status = 'running'; renderPanelUpdate(data); })
+        .catch(e => {
+            btn.disabled = false;
+            btn.textContent = 'Ошибка';
+            alert(e.message);
+        });
+}
+
+function setPanelAutoUpdate(enabled) {
+    panelUpdateRequest(enabled ? 'auto_on' : 'auto_off')
+        .then(data => {
+            renderPanelUpdate(data);
+            showToast(enabled ? 'Автообновление панели включено' : 'Автообновление панели выключено');
+        })
+        .catch(e => {
+            document.getElementById('panelAutoUpdate').checked = !enabled;
+            alert(e.message);
         });
 }
 

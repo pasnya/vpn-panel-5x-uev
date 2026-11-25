@@ -159,7 +159,7 @@
   <div class="card">
     <p><strong>Что нужно:</strong> второй VPS <strong>в России</strong> у любого российского хостера, Ubuntu 20.04, 22.04 или 24.04, x86_64 или ARM64. Основной сервер с панелью уже должен стоять за границей.</p>
     <p><strong>Шаг 1.</strong> На этом российском VPS выполните:</p>
-    <pre>bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.7/proxy_panel/install.sh)"</pre>
+    <pre>bash -c "$(curl -fsSL https://raw.githubusercontent.com/pasnya/vpn-panel-5x-uev/v0.9.8/proxy_panel/install.sh)"</pre>
     <p>Скрипт сам откроет порты <code>51820/udp</code> (OpenVPN) и <code>8443/tcp</code> (панель прокладки) в UFW и выведет <strong>строку подключения</strong> и пароль. Сохраните их сразу, потом будет поздно и грустно.</p>
     <p><strong>Шаг 2.</strong> Вставьте строку в раздел <strong>«Сервер-прокладка»</strong> основной панели. После связки у всех клиентов появится кнопка <strong>«Скачать OpenVPN для прокладки»</strong>. Всё, вы построили каскадный VPN. Можно рассказывать на кухне, никто не поймёт, но звучит солидно.</p>
   </div>
